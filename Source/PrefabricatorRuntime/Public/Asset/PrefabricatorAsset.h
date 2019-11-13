@@ -5,78 +5,94 @@
 #include "Engine/EngineTypes.h"
 #include "PrefabricatorAsset.generated.h"
 
-USTRUCT()
+USTRUCT(Blueprintable)
 struct PREFABRICATORRUNTIME_API FPrefabricatorPropertyAssetMapping {
 	GENERATED_BODY()
 
-	UPROPERTY()
+	UPROPERTY(EditAnywhere, Category = "Prefabricator")
 	FSoftObjectPath AssetReference;
 
-	UPROPERTY()
+	UPROPERTY(EditAnywhere, Category = "Prefabricator")
 	FString AssetClassName;
 
-	UPROPERTY()
+	UPROPERTY(EditAnywhere, Category = "Prefabricator")
 	FName AssetObjectPath;
 
-	UPROPERTY()
+	UPROPERTY(EditAnywhere, Category = "Prefabricator")
 	bool bUseQuotes = false;
 };
 
-UCLASS()
+UCLASS(Blueprintable)
 class PREFABRICATORRUNTIME_API UPrefabricatorProperty : public UObject {
 	GENERATED_BODY()
 public:
-	UPROPERTY()
+	UPROPERTY(EditAnywhere, Category = "Prefabricator")
 	FString PropertyName;
 
-	UPROPERTY()
+	UPROPERTY(EditAnywhere, Category = "Prefabricator")
 	FString ExportedValue;
 
-	UPROPERTY()
+	UPROPERTY(EditAnywhere, Category = "Prefabricator")
 	TArray<FPrefabricatorPropertyAssetMapping> AssetSoftReferenceMappings;
 
 	void SaveReferencedAssetValues();
 	void LoadReferencedAssetValues();
 };
 
-USTRUCT()
+USTRUCT(Blueprintable)
 struct PREFABRICATORRUNTIME_API FPrefabricatorComponentData {
 	GENERATED_USTRUCT_BODY()
 
-	UPROPERTY()
+	UPROPERTY(EditAnywhere, Category = "Prefabricator")
 	FTransform RelativeTransform;
 
-	UPROPERTY()
+	UPROPERTY(EditAnywhere, Category = "Prefabricator")
 	FString ComponentName;
 
-	UPROPERTY()
+	UPROPERTY(EditAnywhere, Category = "Prefabricator")
 	TArray<UPrefabricatorProperty*> Properties;
 };
 
-USTRUCT()
+USTRUCT(Blueprintable)
 struct PREFABRICATORRUNTIME_API FPrefabricatorActorData {
 	GENERATED_USTRUCT_BODY()
 
-	UPROPERTY()
+	UPROPERTY(EditAnywhere, Category = "Prefabricator")
 	FGuid PrefabItemID;
 
-	UPROPERTY()
+	UPROPERTY(EditAnywhere, Category = "Prefabricator")
 	FTransform RelativeTransform;
 
-	UPROPERTY()
+	// SBZ stephane.maruejouls - allow Random placement
+	UPROPERTY(EditAnywhere, Category = "Prefabricator")
+	bool bRandomizeTransform = false;
+
+	UPROPERTY(EditAnywhere, Category = "Prefabricator", meta = (EditCondition = "bRandomizeTransform"))
+	FVector OffsetVariation = FVector::ZeroVector;
+
+	UPROPERTY(EditAnywhere, Category = "Prefabricator", meta = (EditCondition = "bRandomizeTransform"))
+	FRotator OffsetRotation = FRotator::ZeroRotator;
+	// SBZ
+
+	UPROPERTY(EditAnywhere, Category = "Prefabricator")
 	FString ClassPath;
 
-	UPROPERTY()
+	UPROPERTY(EditAnywhere, Category = "Prefabricator")
 	FSoftClassPath ClassPathRef;
 
-	UPROPERTY()
+	UPROPERTY(EditAnywhere, Category = "Prefabricator")
 	TArray<UPrefabricatorProperty*> Properties;
 
-	UPROPERTY()
+	UPROPERTY(EditAnywhere, Category = "Prefabricator")
 	TArray<FPrefabricatorComponentData> Components;
 
+	// SBZ stephane.maruejouls - allow None
+	UPROPERTY(EditAnywhere, Category = "Prefabricator")
+	float Weight = 1.f;
+	// SBZ
+
 #if WITH_EDITORONLY_DATA
-	UPROPERTY()
+	UPROPERTY(EditAnywhere, Category = "Prefabricator")
 	FString ActorName;
 #endif // WITH_EDITORONLY_DATA
 };
@@ -122,7 +138,7 @@ UCLASS(Blueprintable)
 class PREFABRICATORRUNTIME_API UPrefabricatorAsset : public UPrefabricatorAssetInterface {
 	GENERATED_UCLASS_BODY()
 public:
-	UPROPERTY()
+	UPROPERTY(EditAnywhere, Category = "Prefabricator")
 	TArray<FPrefabricatorActorData> ActorData;
 
 	UPROPERTY()
