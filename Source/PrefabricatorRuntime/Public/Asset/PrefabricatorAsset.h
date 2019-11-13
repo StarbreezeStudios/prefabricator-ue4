@@ -5,62 +5,62 @@
 #include "Engine/EngineTypes.h"
 #include "PrefabricatorAsset.generated.h"
 
-USTRUCT(Blueprintable)
+USTRUCT(Blueprintable) // SBZ stephane.maruejouls - allow edition
 struct PREFABRICATORRUNTIME_API FPrefabricatorPropertyAssetMapping {
 	GENERATED_BODY()
 
-	UPROPERTY(EditAnywhere, Category = "Prefabricator")
+	UPROPERTY(EditAnywhere, Category = "Prefabricator") // SBZ stephane.maruejouls - allow edition
 	FSoftObjectPath AssetReference;
 
-	UPROPERTY(EditAnywhere, Category = "Prefabricator")
+	UPROPERTY(EditAnywhere, Category = "Prefabricator") // SBZ stephane.maruejouls - allow edition
 	FString AssetClassName;
 
-	UPROPERTY(EditAnywhere, Category = "Prefabricator")
+	UPROPERTY(EditAnywhere, Category = "Prefabricator") // SBZ stephane.maruejouls - allow edition
 	FName AssetObjectPath;
 
-	UPROPERTY(EditAnywhere, Category = "Prefabricator")
+	UPROPERTY(EditAnywhere, Category = "Prefabricator") // SBZ stephane.maruejouls - allow edition
 	bool bUseQuotes = false;
 };
 
-UCLASS(Blueprintable)
+UCLASS(Blueprintable) // SBZ stephane.maruejouls - allow edition
 class PREFABRICATORRUNTIME_API UPrefabricatorProperty : public UObject {
 	GENERATED_BODY()
 public:
-	UPROPERTY(EditAnywhere, Category = "Prefabricator")
+	UPROPERTY(EditAnywhere, Category = "Prefabricator") // SBZ stephane.maruejouls - allow edition
 	FString PropertyName;
 
-	UPROPERTY(EditAnywhere, Category = "Prefabricator")
+	UPROPERTY(EditAnywhere, Category = "Prefabricator") // SBZ stephane.maruejouls - allow edition
 	FString ExportedValue;
 
-	UPROPERTY(EditAnywhere, Category = "Prefabricator")
+	UPROPERTY(EditAnywhere, Category = "Prefabricator") // SBZ stephane.maruejouls - allow edition
 	TArray<FPrefabricatorPropertyAssetMapping> AssetSoftReferenceMappings;
 
 	void SaveReferencedAssetValues();
 	void LoadReferencedAssetValues();
 };
 
-USTRUCT(Blueprintable)
+USTRUCT(Blueprintable) // SBZ stephane.maruejouls - allow edition
 struct PREFABRICATORRUNTIME_API FPrefabricatorComponentData {
 	GENERATED_USTRUCT_BODY()
 
-	UPROPERTY(EditAnywhere, Category = "Prefabricator")
+	UPROPERTY(EditAnywhere, Category = "Prefabricator") // SBZ stephane.maruejouls - allow edition
 	FTransform RelativeTransform;
 
-	UPROPERTY(EditAnywhere, Category = "Prefabricator")
+	UPROPERTY(EditAnywhere, Category = "Prefabricator") // SBZ stephane.maruejouls - allow edition
 	FString ComponentName;
 
-	UPROPERTY(EditAnywhere, Category = "Prefabricator")
+	UPROPERTY(EditAnywhere, Category = "Prefabricator") // SBZ stephane.maruejouls - allow edition
 	TArray<UPrefabricatorProperty*> Properties;
 };
 
-USTRUCT(Blueprintable)
+USTRUCT(Blueprintable) // SBZ stephane.maruejouls - allow edition
 struct PREFABRICATORRUNTIME_API FPrefabricatorActorData {
 	GENERATED_USTRUCT_BODY()
 
-	UPROPERTY(EditAnywhere, Category = "Prefabricator")
+	UPROPERTY(EditAnywhere, Category = "Prefabricator") // SBZ stephane.maruejouls - allow edition
 	FGuid PrefabItemID;
 
-	UPROPERTY(EditAnywhere, Category = "Prefabricator")
+	UPROPERTY(EditAnywhere, Category = "Prefabricator") // SBZ stephane.maruejouls - allow edition
 	FTransform RelativeTransform;
 
 	// SBZ stephane.maruejouls - allow Random placement
@@ -74,25 +74,25 @@ struct PREFABRICATORRUNTIME_API FPrefabricatorActorData {
 	FRotator OffsetRotation = FRotator::ZeroRotator;
 	// SBZ
 
-	UPROPERTY(EditAnywhere, Category = "Prefabricator")
+	UPROPERTY(EditAnywhere, Category = "Prefabricator") // SBZ stephane.maruejouls - allow edition
 	FString ClassPath;
 
-	UPROPERTY(EditAnywhere, Category = "Prefabricator")
-	FSoftClassPath ClassPathRef;
+	UPROPERTY(EditAnywhere, Category = "Prefabricator") // SBZ stephane.maruejouls - allow edition
+	FSoftClassPath ClassPathRef; 
 
-	UPROPERTY(EditAnywhere, Category = "Prefabricator")
+	UPROPERTY(EditAnywhere, Category = "Prefabricator") // SBZ stephane.maruejouls - allow edition
 	TArray<UPrefabricatorProperty*> Properties;
 
-	UPROPERTY(EditAnywhere, Category = "Prefabricator")
+	UPROPERTY(EditAnywhere, Category = "Prefabricator") // SBZ stephane.maruejouls - allow edition
 	TArray<FPrefabricatorComponentData> Components;
 
 	// SBZ stephane.maruejouls - allow None
-	UPROPERTY(EditAnywhere, Category = "Prefabricator")
+	UPROPERTY(EditAnywhere, Category = "Prefabricator") // SBZ stephane.maruejouls - allow edition
 	float Weight = 1.f;
 	// SBZ
 
 #if WITH_EDITORONLY_DATA
-	UPROPERTY(EditAnywhere, Category = "Prefabricator")
+	UPROPERTY(EditAnywhere, Category = "Prefabricator") // SBZ stephane.maruejouls - allow edition
 	FString ActorName;
 #endif // WITH_EDITORONLY_DATA
 };
@@ -101,7 +101,7 @@ struct FPrefabAssetSelectionConfig {
 	int32 Seed = 0;
 };
 
-UCLASS(Blueprintable)
+UCLASS(Blueprintable) // SBZ stephane.maruejouls - allow edition
 class PREFABRICATORRUNTIME_API UPrefabricatorEventListener : public UObject {
 	GENERATED_BODY()
 public:
@@ -138,7 +138,7 @@ UCLASS(Blueprintable)
 class PREFABRICATORRUNTIME_API UPrefabricatorAsset : public UPrefabricatorAssetInterface {
 	GENERATED_UCLASS_BODY()
 public:
-	UPROPERTY(EditAnywhere, Category = "Prefabricator")
+	UPROPERTY(EditAnywhere, Category = "Prefabricator") // SBZ stephane.maruejouls - allow edition
 	TArray<FPrefabricatorActorData> ActorData;
 
 	UPROPERTY()

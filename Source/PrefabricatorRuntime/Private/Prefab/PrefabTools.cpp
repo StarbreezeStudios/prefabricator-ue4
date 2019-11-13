@@ -618,7 +618,7 @@ void FPrefabTools::LoadStateFromPrefabAsset(APrefabActor* PrefabActor, const FPr
 					ActorItemData.ClassPath = ActorItemData.ClassPathRef.GetAssetPathString();
 				}
 			}
-			// SBZ stephane.maruejouls - allow None
+			// SBZ stephane.maruejouls - allow to randomly spawn the subactor
 			if (ActorItemData.Weight < 1.f)
 			{
 				if (InSettings.Random && InSettings.Random->FRandRange(0.f, 1.f) > ActorItemData.Weight)
