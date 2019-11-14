@@ -66,7 +66,7 @@ TSharedRef< class FSlateStyleSet > FPrefabEditorStyle::Create()
 	{
 		Style.Set("Prefabricator.ContextMenu.Icon", new IMAGE_PLUGIN_BRUSH("PrefabTool/Icons/Icon_Prefab_16", Icon16x16));
 		Style.Set("Prefabricator.CreatePrefab", new IMAGE_PLUGIN_BRUSH("PrefabTool/Icons/Icon_Prefab_48", Icon48x48));
-		Style.Set("Prefabricator.CreatePrefab.Small", new IMAGE_PLUGIN_BRUSH("PrefabTool/Icons/Icon_Prefab_48", Icon20x20));
+		Style.Set("Prefabricator.CreatePrefab.Small", new IMAGE_PLUGIN_BRUSH("PrefabTool/Icons/Icon_Prefab_48", Icon20x20)); // SBZ stephane.maruejouls - fixing small toolbar
 		
 
 		Style.Set("ClassIcon.PrefabActor", new IMAGE_PLUGIN_BRUSH("PrefabTool/Icons/Icon_Prefab_16", Icon16x16));
