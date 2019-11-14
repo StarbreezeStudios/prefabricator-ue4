@@ -74,6 +74,20 @@ struct PREFABRICATORRUNTIME_API FPrefabricatorActorData {
 	FRotator OffsetRotation = FRotator::ZeroRotator;
 	// SBZ
 
+	// SBZ stephane.maruejouls - allow Snapping when random
+	UPROPERTY(EditAnywhere, Category = "Prefabricator", meta = (EditCondition = "bRandomizeTransform"))
+	bool bRandomGridSnapping = false;
+
+	UPROPERTY(EditAnywhere, Category = "Prefabricator", meta = (EditCondition = "bRandomGridSnapping"))
+	float GridSnap = 10.f;
+
+	UPROPERTY(EditAnywhere, Category = "Prefabricator", meta = (EditCondition = "bRandomizeTransform"))
+	bool bRandomAngleSnapping = false;
+
+	UPROPERTY(EditAnywhere, Category = "Prefabricator", meta = (EditCondition = "bRandomAngleSnapping"))
+	float AngleSnap = 45.f;
+	// SBZ
+
 	UPROPERTY(EditAnywhere, Category = "Prefabricator") // SBZ stephane.maruejouls - allow edition
 	FString ClassPath;
 
