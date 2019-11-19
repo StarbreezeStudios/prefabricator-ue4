@@ -70,7 +70,9 @@ void FPrefabActorCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 	if (!bIsCollection) {
 		IDetailCategoryBuilder& Category = DetailBuilder.EditCategory("Prefab Asset Actions", FText::GetEmpty(), ECategoryPriority::Important);
 		Category.AddExternalObjectProperty(PrefabComponents, GET_MEMBER_NAME_CHECKED(UPrefabComponent, PrefabAssetInterface));
-
+		// SBZ stephane.maruejouls - allow edition of seed
+		Category.AddProperty(GET_MEMBER_NAME_CHECKED(APrefabActor, Seed));
+		// SBZ 
 		Category.AddCustomRow(LOCTEXT("PrefabCommand_Filter", "save load prefab asset"))
 		.WholeRowContent()
 		[
