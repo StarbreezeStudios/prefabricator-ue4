@@ -49,7 +49,7 @@ public:
 	FGuid LastUpdateID;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Prefabricator")
-	int32 Seed;
+	int32 Seed = -1;
 };
 
 /////////////////////////////// BuildSystem /////////////////////////////// 

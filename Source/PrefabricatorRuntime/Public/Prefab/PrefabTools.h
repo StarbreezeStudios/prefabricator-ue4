@@ -28,7 +28,7 @@ public:
 	static void SaveStateToPrefabAsset(AActor* InActor, APrefabActor* PrefabActor, FPrefabricatorActorData& OutActorData);
 	static void LoadStateFromPrefabAsset(AActor* InActor, const FPrefabricatorActorData& InActorData, const FPrefabLoadSettings& InSettings);
 
-	static void UnlinkAndDestroyPrefabActor(APrefabActor* PrefabActor);
+	static void UnlinkAndDestroyPrefabActor(APrefabActor* PrefabActor, bool bRecursive=false);
 	static void GetActorChildren(AActor* InParent, TArray<AActor*>& OutChildren);
 
 	static FBox GetPrefabBounds(AActor* PrefabActor, bool bNonColliding = true);

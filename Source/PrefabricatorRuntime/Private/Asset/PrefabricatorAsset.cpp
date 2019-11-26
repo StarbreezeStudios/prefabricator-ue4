@@ -98,7 +98,11 @@ UPrefabricatorAsset* UPrefabricatorAssetCollection::GetPrefabAsset(const FPrefab
 
 	TSoftObjectPtr<UPrefabricatorAsset> PrefabAssetPtr;
 
-	if (TotalWeight == 0) {
+	if (InConfig.Seed == -1)
+	{
+		PrefabAssetPtr = Prefabs[0].PrefabAsset;
+	}
+	else if (TotalWeight == 0) {
 		// Return a random value from the list
 		int32 Index = Random.RandRange(0, Prefabs.Num() - 1);
 		PrefabAssetPtr = Prefabs[Index].PrefabAsset;
