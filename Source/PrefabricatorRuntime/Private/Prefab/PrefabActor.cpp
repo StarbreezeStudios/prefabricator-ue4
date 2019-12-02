@@ -72,21 +72,6 @@ void APrefabActor::PostActorCreated()
 #if WITH_EDITOR
 void APrefabActor::PostEditChangeProperty(struct FPropertyChangedEvent& e)
 {
-	// SBZ stephane.maruejouls - allow edition of seed
-	if (e.Property) {
-		FName PropertyName = e.Property->GetFName();
-		if (PropertyName == GET_MEMBER_NAME_CHECKED(APrefabActor, Seed)) {
-			FRandomStream Random;
-			Random.Initialize(Seed);
-
-			FPrefabLoadSettings LoadSettings;
-			LoadSettings.bRandomizeNestedSeed = true;
-			LoadSettings.Random = &Random;
-			FPrefabTools::LoadStateFromPrefabAsset(this, LoadSettings);
-		}
-	}
-	// SBZ
-
 	Super::PostEditChangeProperty(e);
 
 
