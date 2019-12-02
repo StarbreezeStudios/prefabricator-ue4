@@ -673,18 +673,6 @@ void FPrefabTools::LoadStateFromPrefabAsset(APrefabActor* PrefabActor, const FPr
 						, InSettings.Random->FRandRange(-ActorItemData.OffsetRotation.Yaw, ActorItemData.OffsetRotation.Yaw)
 						, InSettings.Random->FRandRange(-ActorItemData.OffsetRotation.Roll, ActorItemData.OffsetRotation.Roll)
 					);
-					if (ActorItemData.bRandomGridSnapping && !FMath::IsNearlyZero(ActorItemData.GridSnap))
-					{
-						RandomTranslation = FVector(FMath::RoundToFloat(RandomTranslation.X / ActorItemData.GridSnap)*ActorItemData.GridSnap
-							, FMath::RoundToFloat(RandomTranslation.Y / ActorItemData.GridSnap)*ActorItemData.GridSnap
-							, FMath::RoundToFloat(RandomTranslation.Z / ActorItemData.GridSnap)*ActorItemData.GridSnap);
-					}
-					if (ActorItemData.bRandomAngleSnapping && !FMath::IsNearlyZero(ActorItemData.AngleSnap))
-					{
-						 RandomRotation = FRotator(FMath::RoundToFloat(RandomRotation.Pitch / ActorItemData.AngleSnap)*ActorItemData.AngleSnap
-							, FMath::RoundToFloat(RandomRotation.Yaw / ActorItemData.AngleSnap)*ActorItemData.AngleSnap
-							, FMath::RoundToFloat(RandomRotation.Roll / ActorItemData.AngleSnap)*ActorItemData.AngleSnap);
-					}
 					FRotator Rotation = RelativeTransform.Rotator() + RandomRotation;
 					FVector Translation = RelativeTransform.GetLocation() + RandomTranslation;
 					RelativeTransform = FTransform(Rotation, Translation, RelativeTransform.GetScale3D());
