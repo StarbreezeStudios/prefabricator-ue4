@@ -115,13 +115,28 @@ void FPrefabActorCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 
 
 		Category.AddCustomRow(LOCTEXT("PrefabCommandUnlink_Filter", "unlink prefab"))
-			.WholeRowContent()
+		.WholeRowContent()
+		[
+			SNew(SHorizontalBox)
+			+ SHorizontalBox::Slot()
+			.VAlign(VAlign_Center)
+			.FillWidth(1.0f)
+			//.Padding(4.0f)
 			[
 				SNew(SButton)
 				.Text(LOCTEXT("PrefabCommand_Unlink", "Unlink"))
-			.OnClicked(FOnClicked::CreateStatic(&FPrefabActorCustomization::UnlinkPrefab, &DetailBuilder))
-			];
-
+				.OnClicked(FOnClicked::CreateStatic(&FPrefabActorCustomization::UnlinkPrefab, &DetailBuilder, false))
+			]
+			+ SHorizontalBox::Slot()
+			.VAlign(VAlign_Center)
+			.FillWidth(1.0f)
+			//.Padding(4.0f)
+			[
+				SNew(SButton)
+				.Text(LOCTEXT("PrefabCommand_Unlink_Recurse", "Unlink Recursive"))
+				.OnClicked(FOnClicked::CreateStatic(&FPrefabActorCustomization::UnlinkPrefab, &DetailBuilder, true))
+			]
+		];
 
 		DetailBuilder.HideProperty(GET_MEMBER_NAME_CHECKED(APrefabActor, Seed));
 	}
@@ -147,6 +162,29 @@ void FPrefabActorCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 			.OnClicked(FOnClicked::CreateStatic(&FPrefabActorCustomization::HandleLoadFromAsset, &DetailBuilder))
 		];
 
+		Category.AddCustomRow(LOCTEXT("PrefabCommandUnlink_Filter", "unlink prefab"))
+		.WholeRowContent()
+		[
+			SNew(SHorizontalBox)
+			+ SHorizontalBox::Slot()
+			.VAlign(VAlign_Center)
+			.FillWidth(1.0f)
+			//.Padding(4.0f)
+			[
+				SNew(SButton)
+				.Text(LOCTEXT("PrefabCommand_Unlink", "Unlink"))
+				.OnClicked(FOnClicked::CreateStatic(&FPrefabActorCustomization::UnlinkPrefab, &DetailBuilder, false))
+			]
+			+ SHorizontalBox::Slot()
+			.VAlign(VAlign_Center)
+			.FillWidth(1.0f)
+			//.Padding(4.0f)
+			[
+				SNew(SButton)
+				.Text(LOCTEXT("PrefabCommand_Unlink_Recurse", "Unlink Recursive"))
+				.OnClicked(FOnClicked::CreateStatic(&FPrefabActorCustomization::UnlinkPrefab, &DetailBuilder, true))
+			]
+		];
 	}
 }
 
@@ -187,7 +225,7 @@ FReply FPrefabActorCustomization::HandleSaveToNewAsset(IDetailLayoutBuilder* Det
 
 			if(Children.Num() > 0)
 			{
-				FPrefabTools::UnlinkAndDestroyPrefabActor(PrefabActor);
+				FPrefabTools::UnlinkAndDestroyPrefabActor(PrefabActor, "/", false);
 				FPrefabTools::CreatePrefabFromActors(Children);
 			}
 		}
@@ -224,13 +262,22 @@ FReply FPrefabActorCustomization::RandomizePrefabCollection(IDetailLayoutBuilder
 	return FReply::Handled();
 }
 
-FReply FPrefabActorCustomization::UnlinkPrefab(IDetailLayoutBuilder* DetailBuilder)
+FReply FPrefabActorCustomization::UnlinkPrefab(IDetailLayoutBuilder* DetailBuilder, bool bRecursive)
 {
 
 	TArray<APrefabActor*> PrefabActors = GetDetailObject<APrefabActor>(DetailBuilder);
 	for (APrefabActor* PrefabActor : PrefabActors) {
 		if (PrefabActor) {
-			FPrefabTools::UnlinkAndDestroyPrefabActor(PrefabActor);
+			AActor* Parent = PrefabActor->GetAttachParentActor();
+			if (Parent)
+			{
+				FPrefabTools::UnlinkAndDestroyPrefabActor(PrefabActor, "/", bRecursive);
+			}
+			else
+			{
+				FString FolderPath = PrefabActor->GetFolderPath().ToString() + "/" + PrefabActor->GetName();
+				FPrefabTools::UnlinkAndDestroyPrefabActor(PrefabActor, FolderPath, bRecursive);
+			}
 		}
 	}
 	return FReply::Handled();
