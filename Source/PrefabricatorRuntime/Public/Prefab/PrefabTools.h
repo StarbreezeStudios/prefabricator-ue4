@@ -10,8 +10,8 @@ struct FPrefabricatorActorData;
 
 struct PREFABRICATORRUNTIME_API FPrefabLoadSettings {
 	bool bUnregisterComponentsBeforeLoading = true;
-	bool bRandomizeNestedSeed = false;
 	bool bSynchronousBuild = true;
+	bool bUnRandomized= false;
 	const FRandomStream* Random = nullptr;
 };
 
@@ -19,11 +19,12 @@ class PREFABRICATORRUNTIME_API FPrefabTools {
 public:
 	static bool CanCreatePrefab();
 	static void CreatePrefab();
-	static void CreatePrefabFromActors(const TArray<AActor*>& Actors);
+	static void CreatePrefabFromActors(const TArray<AActor*>& Actors, int32 Seed);
 	static void AssignAssetUserData(AActor* InActor, const FGuid& InItemID, APrefabActor* Prefab);
 
 	static void SaveStateToPrefabAsset(APrefabActor* PrefabActor);
 	static void LoadStateFromPrefabAsset(APrefabActor* PrefabActor, const FPrefabLoadSettings& InSettings = FPrefabLoadSettings());
+	static void RandomizeState(APrefabActor* PrefabActor, const FPrefabLoadSettings& InSettings);
 
 	static void SaveStateToPrefabAsset(AActor* InActor, APrefabActor* PrefabActor, FPrefabricatorActorData& OutActorData);
 	static void LoadStateFromPrefabAsset(AActor* InActor, const FPrefabricatorActorData& InActorData, const FPrefabLoadSettings& InSettings);

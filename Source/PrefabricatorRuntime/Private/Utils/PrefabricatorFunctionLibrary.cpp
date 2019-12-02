@@ -35,12 +35,8 @@ APrefabActor* UPrefabricatorBlueprintLibrary::SpawnPrefab(const UObject* WorldCo
 
 void UPrefabricatorBlueprintLibrary::RandomizePrefab(APrefabActor* PrefabActor, const FRandomStream& InRandom)
 {
-	PrefabActor->RandomizeSeed(InRandom);
-
-	FPrefabLoadSettings LoadSettings;
-	LoadSettings.bRandomizeNestedSeed = true;
-	LoadSettings.Random = &InRandom;
-	FPrefabTools::LoadStateFromPrefabAsset(PrefabActor, LoadSettings);
+	PrefabActor->RandomizeSeed();
+	PrefabActor->OnSeedChanged();
 }
 
 void UPrefabricatorBlueprintLibrary::GetAllAttachedActors(AActor* Prefab, TArray<AActor*>& AttachedActors)

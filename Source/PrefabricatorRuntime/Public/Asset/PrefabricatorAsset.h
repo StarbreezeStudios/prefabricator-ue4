@@ -100,11 +100,6 @@ struct PREFABRICATORRUNTIME_API FPrefabricatorActorData {
 	UPROPERTY(EditAnywhere, Category = "Prefabricator") // SBZ stephane.maruejouls - allow edition
 	TArray<FPrefabricatorComponentData> Components;
 
-	// SBZ stephane.maruejouls - allow None
-	UPROPERTY(EditAnywhere, Category = "Prefabricator") // SBZ stephane.maruejouls - allow edition
-	float Weight = 1.f;
-	// SBZ
-
 #if WITH_EDITORONLY_DATA
 	UPROPERTY(EditAnywhere, Category = "Prefabricator") // SBZ stephane.maruejouls - allow edition
 	FString ActorName;
@@ -134,6 +129,9 @@ public:
 
 	UPROPERTY(EditAnywhere, Category = "Replication")
 	bool bReplicates = false;
+
+	UPROPERTY(EditAnywhere, Category = "Prefabricator")
+	int32 Seed = -1; 
 
 public:
 	virtual class UPrefabricatorAsset* GetPrefabAsset(const FPrefabAssetSelectionConfig& InConfig) { return nullptr; }

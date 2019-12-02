@@ -103,7 +103,7 @@ void FPrefabTools::CreatePrefab()
 	TArray<AActor*> SelectedActors;
 	GetSelectedActors(SelectedActors);
 
-	CreatePrefabFromActors(SelectedActors);
+	CreatePrefabFromActors(SelectedActors,-1);
 }
 
 namespace {
@@ -133,7 +133,7 @@ namespace {
 	}
 
 }
-void FPrefabTools::CreatePrefabFromActors(const TArray<AActor*>& InActors)
+void FPrefabTools::CreatePrefabFromActors(const TArray<AActor*>& InActors, int32 Seed)
 {
 	TArray<AActor*> Actors;
 	SanitizePrefabActorsForCreation(InActors, Actors);
@@ -157,6 +157,7 @@ void FPrefabTools::CreatePrefabFromActors(const TArray<AActor*>& InActors)
 	FVector Pivot = FPrefabricatorAssetUtils::FindPivot(Actors);
 	APrefabActor* PrefabActor = World->SpawnActor<APrefabActor>(Pivot, FRotator::ZeroRotator);
 
+	PrefabActor->Seed = Seed;
 	// Find the compatible mobility for the prefab actor
 	EComponentMobility::Type Mobility = FPrefabricatorAssetUtils::FindMobility(Actors);
 	PrefabActor->GetRootComponent()->SetMobility(Mobility);
@@ -204,6 +205,7 @@ void FPrefabTools::SaveStateToPrefabAsset(APrefabActor* PrefabActor)
 	}
 
 	PrefabAsset->PrefabMobility = PrefabActor->GetRootComponent()->Mobility;
+	PrefabAsset->Seed = PrefabActor->Seed;
 
 	PrefabAsset->ActorData.Reset();
 
@@ -581,6 +583,155 @@ FBox FPrefabTools::GetPrefabBounds(AActor* PrefabActor, bool bNonColliding)
 	return Result;
 }
 
+void FPrefabTools::RandomizeState(APrefabActor* PrefabActor, const FPrefabLoadSettings& InSettings)
+{
+	if (!PrefabActor) {
+		UE_LOG(LogPrefabTools, Error, TEXT("Invalid prefab actor reference"));
+		return;
+	}
+
+	UPrefabricatorAsset* PrefabAsset = PrefabActor->GetPrefabAsset();
+	PrefabActor->GetRootComponent()->SetMobility(PrefabAsset ? PrefabAsset->PrefabMobility : EComponentMobility::Static);
+
+	TArray<AActor*> ExistingActorPool;
+	TArray<AActor*> ExistingActorPrefabPool;
+	GetActorChildren(PrefabActor, ExistingActorPool);
+	TMap<FGuid, AActor*> ActorByItemID;
+
+	for (AActor* ExistingActor : ExistingActorPool) {
+		if (ExistingActor && ExistingActor->GetRootComponent()) {
+			UPrefabricatorAssetUserData* PrefabUserData = ExistingActor->GetRootComponent()->GetAssetUserData<UPrefabricatorAssetUserData>();
+			if (PrefabUserData && PrefabUserData->PrefabActor == PrefabActor) {
+				ActorByItemID.Add(PrefabUserData->ItemID, ExistingActor);
+				ExistingActorPrefabPool.Add(ExistingActor);
+			}
+		}
+	}
+
+	if (PrefabAsset)
+	{
+		for (FPrefabricatorActorData& ActorItemData : PrefabAsset->ActorData) {
+			// Handle backward compatibility
+			{
+				if (!ActorItemData.ClassPathRef.IsValid()) {
+					ActorItemData.ClassPathRef = ActorItemData.ClassPath;
+				}
+
+				if (ActorItemData.ClassPathRef.GetAssetPathString() != ActorItemData.ClassPath) {
+					ActorItemData.ClassPath = ActorItemData.ClassPathRef.GetAssetPathString();
+				}
+			}
+
+			UClass* ActorClass = LoadObject<UClass>(nullptr, *ActorItemData.ClassPathRef.GetAssetPathString());
+			if (!ActorClass) continue;
+
+			UWorld* World = PrefabActor->GetWorld();
+			AActor* ChildActor = nullptr;
+			if (AActor** SearchResult = ActorByItemID.Find(ActorItemData.PrefabItemID)) {
+				ChildActor = *SearchResult;
+				FString ExistingClassName = ChildActor->GetClass()->GetPathName();
+				FString RequiredClassName = ActorItemData.ClassPathRef.GetAssetPathString();
+				if (ExistingClassName == RequiredClassName) {
+					// We can reuse this actor
+					ExistingActorPool.Remove(ChildActor);
+					ExistingActorPrefabPool.Remove(ChildActor);
+				}
+			}
+
+			if (!ChildActor) {
+				TSharedPtr<IPrefabricatorService> Service = FPrefabricatorService::Get();
+				if (Service.IsValid()) {
+					ChildActor = Service->SpawnActor(ActorClass, FTransform::Identity, PrefabActor->GetLevel());
+				}
+				//FActorSpawnParameters SpawnParams;
+				//SpawnParams.OverrideLevel = PrefabActor->GetLevel();
+				//ChildActor = World->SpawnActor<AActor>(ActorClass, SpawnParams);
+			}
+
+			if (ChildActor) {
+				// Load the saved data into the actor
+				LoadStateFromPrefabAsset(ChildActor, ActorItemData, InSettings);
+
+				ParentActors(PrefabActor, ChildActor);
+				AssignAssetUserData(ChildActor, ActorItemData.PrefabItemID, PrefabActor);
+
+				// Set the transform
+				// SBZ stephane.maruejouls - allow Random placement
+				FTransform RelativeTransform = ActorItemData.RelativeTransform;
+				FTransform WorldTransform = RelativeTransform * PrefabActor->GetTransform();
+				// SBZ
+
+				if (ChildActor->GetRootComponent()) {
+					EComponentMobility::Type OldChildMobility = EComponentMobility::Movable;
+					if (ChildActor->GetRootComponent()) {
+						OldChildMobility = ChildActor->GetRootComponent()->Mobility;
+					}
+					ChildActor->GetRootComponent()->SetMobility(EComponentMobility::Movable);
+					ChildActor->SetActorTransform(WorldTransform);
+					ChildActor->GetRootComponent()->SetMobility(OldChildMobility);
+				}
+
+				if (APrefabActor* ChildPrefab = Cast<APrefabActor>(ChildActor)) {
+					
+					if (InSettings.Random && PrefabActor->Seed != -1) {
+						// This is a nested child prefab.  Randomize the seed of the child prefab
+						ChildPrefab->Seed = FPrefabTools::GetRandomSeed(*InSettings.Random);
+					}
+					if (InSettings.Random && PrefabActor->Seed == -1)
+					{
+						ChildPrefab->Seed = -1;
+					}
+					if (InSettings.Random)
+					{
+						//InSettings.Random->Initialize(ChildPrefab->Seed);
+					}
+					if (InSettings.bSynchronousBuild) {
+						RandomizeState(ChildPrefab, InSettings);
+					}
+				}
+			}
+		}
+	}
+
+	
+	for (AActor* UnusedActor : ExistingActorPrefabPool) {
+		ExistingActorPool.Remove(UnusedActor);
+		UnusedActor->Destroy();		
+	}
+
+	// Randomize sub actor if they were not part of the original prefab
+	for (AActor* UnusedActor : ExistingActorPool) {
+		if (APrefabActor* ChildPrefab = Cast<APrefabActor>(UnusedActor)) {
+			if (InSettings.Random && PrefabActor->Seed != -1) {
+				// This is a nested child prefab.  Randomize the seed of the child prefab
+				ChildPrefab->Seed = FPrefabTools::GetRandomSeed(*InSettings.Random);
+			}
+			if (InSettings.Random && PrefabActor->Seed == -1)
+			{
+				ChildPrefab->Seed = -1;
+			}
+			if (InSettings.Random)
+			{
+				//InSettings.Random->Initialize(ChildPrefab->Seed);
+			}
+			if (InSettings.bSynchronousBuild) {
+				RandomizeState(ChildPrefab, InSettings);
+			}
+		}
+	}
+	// SBZ stephane.maruejouls - allow None
+	if (PrefabAsset)
+	{
+		PrefabActor->LastUpdateID = PrefabAsset->LastUpdateID;
+	}
+	// SBZ
+
+	if (InSettings.bSynchronousBuild) {
+		PrefabActor->HandleBuildComplete();
+	}
+}
+
+
 void FPrefabTools::LoadStateFromPrefabAsset(APrefabActor* PrefabActor, const FPrefabLoadSettings& InSettings)
 {
 	if (!PrefabActor) {
@@ -589,12 +740,16 @@ void FPrefabTools::LoadStateFromPrefabAsset(APrefabActor* PrefabActor, const FPr
 	}
 
 	UPrefabricatorAsset* PrefabAsset = PrefabActor->GetPrefabAsset();
-	// SBZ stephane.maruejouls - allow None
 	/*if (!PrefabAsset) {
 		UE_LOG(LogPrefabTools, Error, TEXT("Prefab asset is not assigned correctly"));
 		return;
 	}*/
-
+	
+	if (PrefabAsset)
+	{
+		PrefabActor->Seed = PrefabAsset->Seed;
+	}
+	
 	PrefabActor->GetRootComponent()->SetMobility(PrefabAsset ? PrefabAsset->PrefabMobility : EComponentMobility::Static );
 	// SBZ
 
@@ -612,7 +767,6 @@ void FPrefabTools::LoadStateFromPrefabAsset(APrefabActor* PrefabActor, const FPr
 		}
 	}
 	
-	// SBZ stephane.maruejouls - allow None
 	if (PrefabAsset)
 	{
 		for (FPrefabricatorActorData& ActorItemData : PrefabAsset->ActorData) {
@@ -626,15 +780,6 @@ void FPrefabTools::LoadStateFromPrefabAsset(APrefabActor* PrefabActor, const FPr
 					ActorItemData.ClassPath = ActorItemData.ClassPathRef.GetAssetPathString();
 				}
 			}
-			// SBZ stephane.maruejouls - allow to randomly spawn the subactor
-			if (ActorItemData.Weight < 1.f)
-			{
-				if (InSettings.Random && InSettings.Random->FRandRange(0.f, 1.f) > ActorItemData.Weight)
-				{
-					continue;
-				}
-			}
-			// SBZ
 
 			UClass* ActorClass = LoadObject<UClass>(nullptr, *ActorItemData.ClassPathRef.GetAssetPathString());
 			if (!ActorClass) continue;
@@ -671,34 +816,9 @@ void FPrefabTools::LoadStateFromPrefabAsset(APrefabActor* PrefabActor, const FPr
 				// Set the transform
 				// SBZ stephane.maruejouls - allow Random placement
 				FTransform RelativeTransform = ActorItemData.RelativeTransform;
-				if (ActorItemData.bRandomizeTransform && InSettings.Random)
-				{
-					FVector RandomTranslation = FVector(InSettings.Random->FRandRange(-ActorItemData.OffsetVariation.X, ActorItemData.OffsetVariation.X)
-						, InSettings.Random->FRandRange(-ActorItemData.OffsetVariation.Y, ActorItemData.OffsetVariation.Y)
-						, InSettings.Random->FRandRange(-ActorItemData.OffsetVariation.Z, ActorItemData.OffsetVariation.Z)
-					);
-					FRotator RandomRotation = FRotator(InSettings.Random->FRandRange(-ActorItemData.OffsetRotation.Pitch, ActorItemData.OffsetRotation.Pitch)
-						, InSettings.Random->FRandRange(-ActorItemData.OffsetRotation.Yaw, ActorItemData.OffsetRotation.Yaw)
-						, InSettings.Random->FRandRange(-ActorItemData.OffsetRotation.Roll, ActorItemData.OffsetRotation.Roll)
-					);
-					if (ActorItemData.bRandomGridSnapping && !FMath::IsNearlyZero(ActorItemData.GridSnap))
-					{
-						RandomTranslation = FVector(FMath::RoundToFloat(RandomTranslation.X / ActorItemData.GridSnap)*ActorItemData.GridSnap
-							, FMath::RoundToFloat(RandomTranslation.Y / ActorItemData.GridSnap)*ActorItemData.GridSnap
-							, FMath::RoundToFloat(RandomTranslation.Z / ActorItemData.GridSnap)*ActorItemData.GridSnap);
-					}
-					if (ActorItemData.bRandomAngleSnapping && !FMath::IsNearlyZero(ActorItemData.AngleSnap))
-					{
-						 RandomRotation = FRotator(FMath::RoundToFloat(RandomRotation.Pitch / ActorItemData.AngleSnap)*ActorItemData.AngleSnap
-							, FMath::RoundToFloat(RandomRotation.Yaw / ActorItemData.AngleSnap)*ActorItemData.AngleSnap
-							, FMath::RoundToFloat(RandomRotation.Roll / ActorItemData.AngleSnap)*ActorItemData.AngleSnap);
-					}
-					FRotator Rotation = RelativeTransform.Rotator() + RandomRotation;
-					FVector Translation = RelativeTransform.GetLocation() + RandomTranslation;
-					RelativeTransform = FTransform(Rotation, Translation, RelativeTransform.GetScale3D());
-				}				
 				FTransform WorldTransform = RelativeTransform * PrefabActor->GetTransform();
 				// SBZ
+
 				if (ChildActor->GetRootComponent()) {
 					EComponentMobility::Type OldChildMobility = EComponentMobility::Movable;
 					if (ChildActor->GetRootComponent()) {
@@ -710,34 +830,23 @@ void FPrefabTools::LoadStateFromPrefabAsset(APrefabActor* PrefabActor, const FPr
 				}
 
 				if (APrefabActor* ChildPrefab = Cast<APrefabActor>(ChildActor)) {
-					if (InSettings.bRandomizeNestedSeed && InSettings.Random) {
-						// This is a nested child prefab.  Randomize the seed of the child prefab
-						ChildPrefab->Seed = FPrefabTools::GetRandomSeed(*InSettings.Random);
-					}
-					else
-					{
-						ChildPrefab->Seed = -1;
-					}
 					if (InSettings.bSynchronousBuild) {
-						LoadStateFromPrefabAsset(ChildPrefab, InSettings);
+						RandomizeState(ChildPrefab, InSettings);
 					}
 				}
 			}
 		}
 	}
-	// SBZ
 
 	// Destroy the unused actors from the pool
 	for (AActor* UnusedActor : ExistingActorPool) {
 		UnusedActor->Destroy();
 	}
 
-	// SBZ stephane.maruejouls - allow None
 	if (PrefabAsset)
 	{
 		PrefabActor->LastUpdateID = PrefabAsset->LastUpdateID;
 	}
-	// SBZ
 
 	if (InSettings.bSynchronousBuild) {
 		PrefabActor->HandleBuildComplete();

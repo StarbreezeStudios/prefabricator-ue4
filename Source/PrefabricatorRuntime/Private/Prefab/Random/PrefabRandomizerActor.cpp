@@ -90,7 +90,7 @@ void APrefabRandomizer::Randomize(int32 InSeed)
 	});
 
 	for (APrefabActor* PrefabActor : TopLevelPrefabs) {
-		PrefabActor->RandomizeSeed(Random, false);
+		PrefabActor->RandomizeSeed();
 	}
 
 	TArray<APrefabSeedLinker*> SeedLinkersInLevel;
@@ -107,7 +107,7 @@ void APrefabRandomizer::Randomize(int32 InSeed)
 
 	BuildSystem = MakeShareable(new FPrefabBuildSystem(MaxBuildTimePerFrame));
 	for (APrefabActor* TopLevelPrefab : TopLevelPrefabs) {
-		FPrefabBuildSystemCommandPtr BuildCommand = MakeShareable(new FPrefabBuildSystemCommand_BuildPrefab(TopLevelPrefab, true, &Random));
+		FPrefabBuildSystemCommandPtr BuildCommand = MakeShareable(new FPrefabBuildSystemCommand_BuildPrefab(TopLevelPrefab,  &Random));
 		BuildSystem->PushCommand(BuildCommand);
 	}
 

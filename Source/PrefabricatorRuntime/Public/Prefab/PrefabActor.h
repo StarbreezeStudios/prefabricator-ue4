@@ -38,9 +38,10 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Prefabricator")
 	UPrefabricatorAsset* GetPrefabAsset();
 
-	UFUNCTION(BlueprintCallable, Category = "Prefabricator")
-	void RandomizeSeed(const FRandomStream& InRandom, bool bRecursive = true);
 	void HandleBuildComplete();
+
+	void RandomizeSeed();
+	void OnSeedChanged();
 
 public:
 	// The last update ID of the prefab asset when this actor was refreshed from it
@@ -66,13 +67,12 @@ typedef TSharedPtr<FPrefabBuildSystemCommand> FPrefabBuildSystemCommandPtr;
 
 class PREFABRICATORRUNTIME_API FPrefabBuildSystemCommand_BuildPrefab : public FPrefabBuildSystemCommand {
 public:
-	FPrefabBuildSystemCommand_BuildPrefab(TWeakObjectPtr<APrefabActor> InPrefab, bool bInRandomizeNestedSeed, FRandomStream* InRandom);
+	FPrefabBuildSystemCommand_BuildPrefab(TWeakObjectPtr<APrefabActor> InPrefab, FRandomStream* InRandom);
 
 	virtual void Execute(FPrefabBuildSystem& BuildSystem) override;
 
 private:
 	TWeakObjectPtr<APrefabActor> Prefab;
-	bool bRandomizeNestedSeed = false;
 	FRandomStream* Random = nullptr;
 };
 

@@ -66,7 +66,21 @@ void APrefabActor::PostLoad()
 void APrefabActor::PostActorCreated()
 {
 	Super::PostActorCreated();
+}
 
+void APrefabActor::RandomizeSeed()
+{
+	Seed = FMath::Rand();
+}
+
+void APrefabActor::OnSeedChanged()
+{
+	FRandomStream Random;
+	Random.Initialize(Seed);
+
+	FPrefabLoadSettings LoadSettings;
+	LoadSettings.Random = &Random;
+	FPrefabTools::RandomizeState(this, LoadSettings);
 }
 
 #if WITH_EDITOR
@@ -76,20 +90,11 @@ void APrefabActor::PostEditChangeProperty(struct FPropertyChangedEvent& e)
 	if (e.Property) {
 		FName PropertyName = e.Property->GetFName();
 		if (PropertyName == GET_MEMBER_NAME_CHECKED(APrefabActor, Seed)) {
-			FRandomStream Random;
-			Random.Initialize(Seed);
-
-			FPrefabLoadSettings LoadSettings;
-			LoadSettings.bRandomizeNestedSeed = true;
-			LoadSettings.Random = &Random;
-			FPrefabTools::LoadStateFromPrefabAsset(this, LoadSettings);
+			OnSeedChanged();
 		}
 	}
 	// SBZ
-
 	Super::PostEditChangeProperty(e);
-
-
 }
 
 void APrefabActor::PostDuplicate(EDuplicateMode::Type DuplicateMode)
@@ -97,14 +102,8 @@ void APrefabActor::PostDuplicate(EDuplicateMode::Type DuplicateMode)
 	Super::PostDuplicate(DuplicateMode);
 
 	if (DuplicateMode == EDuplicateMode::Normal) {
-		FRandomStream Random;
-		Random.Initialize(FMath::Rand());
-		RandomizeSeed(Random);
-
-		FPrefabLoadSettings LoadSettings;
-		LoadSettings.bRandomizeNestedSeed = true;
-		LoadSettings.Random = &Random;
-		FPrefabTools::LoadStateFromPrefabAsset(this, LoadSettings);
+		RandomizeSeed();
+		OnSeedChanged();
 	}
 }
 
@@ -142,20 +141,6 @@ UPrefabricatorAsset* APrefabActor::GetPrefabAsset()
 	SelectionConfig.Seed = Seed;
 	UPrefabricatorAssetInterface* PrefabAssetInterface = PrefabComponent->PrefabAssetInterface.LoadSynchronous();
 	return PrefabAssetInterface ? PrefabAssetInterface->GetPrefabAsset(SelectionConfig) : nullptr;
-}
-
-void APrefabActor::RandomizeSeed(const FRandomStream& InRandom, bool bRecursive)
-{
-	Seed = FPrefabTools::GetRandomSeed(InRandom);
-	if (bRecursive) {
-		TArray<AActor*> AttachedChildren;
-		GetAttachedActors(AttachedChildren);
-		for (AActor* AttachedActor : AttachedChildren) {
-			if (APrefabActor* ChildPrefab = Cast<APrefabActor>(AttachedActor)) {
-				ChildPrefab->RandomizeSeed(InRandom, bRecursive);
-			}
-		}
-	}
 }
 
 void APrefabActor::HandleBuildComplete()
@@ -203,9 +188,8 @@ void FPrefabBuildSystem::PushCommand(FPrefabBuildSystemCommandPtr InCommand)
 	BuildStack.Push(InCommand);
 }
 
-FPrefabBuildSystemCommand_BuildPrefab::FPrefabBuildSystemCommand_BuildPrefab(TWeakObjectPtr<APrefabActor> InPrefab, bool bInRandomizeNestedSeed, FRandomStream* InRandom)
+FPrefabBuildSystemCommand_BuildPrefab::FPrefabBuildSystemCommand_BuildPrefab(TWeakObjectPtr<APrefabActor> InPrefab, FRandomStream* InRandom)
 	: Prefab(InPrefab)
-	, bRandomizeNestedSeed(bInRandomizeNestedSeed)
 	, Random(InRandom)
 {
 }
@@ -214,13 +198,12 @@ void FPrefabBuildSystemCommand_BuildPrefab::Execute(FPrefabBuildSystem& BuildSys
 {
 	if (Prefab.IsValid()) {
 		FPrefabLoadSettings LoadSettings;
-		LoadSettings.bRandomizeNestedSeed = bRandomizeNestedSeed;
 		LoadSettings.Random = Random;
 
 		// Nested prefabs will be recursively build on the stack over multiple frames
 		LoadSettings.bSynchronousBuild = false;
 
-		FPrefabTools::LoadStateFromPrefabAsset(Prefab.Get(), LoadSettings);
+		FPrefabTools::RandomizeState(Prefab.Get(), LoadSettings);
 
 		// Push a build complete notification request. Since this is a stack, it will execute after all the children are processed below
 		FPrefabBuildSystemCommandPtr ChildBuildCommand = MakeShareable(new FPrefabBuildSystemCommand_NotifyBuildComplete(Prefab));
@@ -232,7 +215,7 @@ void FPrefabBuildSystemCommand_BuildPrefab::Execute(FPrefabBuildSystem& BuildSys
 	Prefab->GetAttachedActors(ChildActors);
 	for (AActor* ChildActor : ChildActors) {
 		if (APrefabActor* ChildPrefab = Cast<APrefabActor>(ChildActor)) {
-			FPrefabBuildSystemCommandPtr ChildBuildCommand = MakeShareable(new FPrefabBuildSystemCommand_BuildPrefab(ChildPrefab, bRandomizeNestedSeed, Random));
+			FPrefabBuildSystemCommandPtr ChildBuildCommand = MakeShareable(new FPrefabBuildSystemCommand_BuildPrefab(ChildPrefab, Random));
 			BuildSystem.PushCommand(ChildBuildCommand);
 		}
 	}

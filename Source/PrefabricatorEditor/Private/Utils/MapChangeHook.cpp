@@ -24,6 +24,6 @@ void FMapChangeHook::Release()
 
 void FMapChangeHook::OnMapChanged(UWorld* World, EMapChangeType MapChangeType)
 {
-	FPrefabEditorTools::ReloadPrefabsInLevel(World);
+	//FPrefabEditorTools::ReloadPrefabsInLevel(World);
 }
 

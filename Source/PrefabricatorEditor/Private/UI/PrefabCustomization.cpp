@@ -3,6 +3,7 @@
 #include "UI/PrefabCustomization.h"
 
 #include "Asset/PrefabricatorAsset.h"
+#include "Asset/PrefabricatorAssetUserData.h"
 #include "Prefab/PrefabActor.h"
 #include "Prefab/PrefabComponent.h"
 #include "Prefab/PrefabTools.h"
@@ -66,10 +67,26 @@ void FPrefabActorCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 		ExtenderDelegate.Execute(DetailBuilder);
 	}
 	
+	
 
 	if (!bIsCollection) {
 		IDetailCategoryBuilder& Category = DetailBuilder.EditCategory("Prefab Asset Actions", FText::GetEmpty(), ECategoryPriority::Important);
 		Category.AddExternalObjectProperty(PrefabComponents, GET_MEMBER_NAME_CHECKED(UPrefabComponent, PrefabAssetInterface));
+		for (UObject* PrefabObject : PrefabComponents)
+		{
+			UPrefabComponent* PrefabComp = CastChecked<UPrefabComponent>(PrefabObject);
+			if (PrefabComp)
+			{
+				UPrefabricatorAssetUserData* PrefabUserData = PrefabComp->GetAssetUserData<UPrefabricatorAssetUserData>();
+				if (PrefabUserData)
+				{
+					TArray<UObject*> SubAssets;
+					SubAssets.Add(PrefabUserData);
+					Category.AddExternalObjectProperty(SubAssets, GET_MEMBER_NAME_CHECKED(UPrefabricatorAssetUserData, ItemID))->IsEnabled(false);
+				}
+			}
+		}
+
 		// SBZ stephane.maruejouls - allow edition of seed
 		Category.AddProperty(GET_MEMBER_NAME_CHECKED(APrefabActor, Seed));
 		// SBZ 
@@ -173,6 +190,22 @@ void FPrefabActorCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 				}
 			}
 		}
+
+		for (UObject* PrefabObject : PrefabComponents)
+		{
+			UPrefabComponent* PrefabComp = CastChecked<UPrefabComponent>(PrefabObject);
+			if (PrefabComp)
+			{
+				UPrefabricatorAssetUserData* PrefabUserData = PrefabComp->GetAssetUserData<UPrefabricatorAssetUserData>();
+				if (PrefabUserData)
+				{
+					TArray<UObject*> SubAssets;
+					SubAssets.Add(PrefabUserData);
+					Category.AddExternalObjectProperty(SubAssets, GET_MEMBER_NAME_CHECKED(UPrefabricatorAssetUserData, ItemID))->IsEnabled(false);
+				}
+			}
+		}
+
 		Category.AddProperty(GET_MEMBER_NAME_CHECKED(APrefabActor, Seed));
 			
 		Category.AddCustomRow(LOCTEXT("PrefabCollectionCommandRandomize_Filter", "randomize prefab collection asset"))
@@ -268,8 +301,9 @@ FReply FPrefabActorCustomization::HandleSaveToNewAsset(IDetailLayoutBuilder* Det
 
 			if(Children.Num() > 0)
 			{
+				int32 Seed = PrefabActor->Seed;
 				FPrefabTools::UnlinkAndDestroyPrefabActor(PrefabActor);
-				FPrefabTools::CreatePrefabFromActors(Children);
+				FPrefabTools::CreatePrefabFromActors(Children, Seed);
 			}
 		}
 	}
@@ -292,14 +326,8 @@ FReply FPrefabActorCustomization::RandomizePrefab(IDetailLayoutBuilder* DetailBu
 	TArray<APrefabActor*> PrefabActors = GetDetailObject<APrefabActor>(DetailBuilder);
 	for (APrefabActor* PrefabActor : PrefabActors) {
 		if (PrefabActor) {
-			FRandomStream Random;
-			Random.Initialize(FMath::Rand());
-			PrefabActor->RandomizeSeed(Random);
-
-			FPrefabLoadSettings LoadSettings;
-			LoadSettings.bRandomizeNestedSeed = true;
-			LoadSettings.Random = &Random;
-			FPrefabTools::LoadStateFromPrefabAsset(PrefabActor, LoadSettings);
+			PrefabActor->RandomizeSeed();
+			PrefabActor->OnSeedChanged();
 		}
 	}
 	return FReply::Handled();
@@ -311,10 +339,7 @@ FReply FPrefabActorCustomization::UnrandomizePrefab(IDetailLayoutBuilder* Detail
 	for (APrefabActor* PrefabActor : PrefabActors) {
 		if (PrefabActor) {
 			PrefabActor->Seed = -1;
-
-			FPrefabLoadSettings LoadSettings;
-			LoadSettings.bRandomizeNestedSeed = true;
-			FPrefabTools::LoadStateFromPrefabAsset(PrefabActor, LoadSettings);
+			PrefabActor->OnSeedChanged();
 		}
 	}
 	return FReply::Handled();
