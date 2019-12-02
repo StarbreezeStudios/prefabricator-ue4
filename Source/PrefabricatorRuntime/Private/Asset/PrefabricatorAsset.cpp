@@ -98,7 +98,11 @@ UPrefabricatorAsset* UPrefabricatorAssetCollection::GetPrefabAsset(const FPrefab
 
 	TSoftObjectPtr<UPrefabricatorAsset> PrefabAssetPtr;
 
-	if (TotalWeight == 0) {
+	if (InConfig.Seed == -1)
+	{
+		PrefabAssetPtr = Prefabs[0].PrefabAsset;
+	}
+	else if (TotalWeight == 0) {
 		// Return a random value from the list
 		int32 Index = Random.RandRange(0, Prefabs.Num() - 1);
 		PrefabAssetPtr = Prefabs[Index].PrefabAsset;
@@ -215,5 +219,48 @@ void UPrefabricatorProperty::LoadReferencedAssetValues()
 	if (bModified) {
 		Modify();
 	}
+}
+
+UPrefabricatorProperty* UPrefabricatorProperty::Clone(AActor* DuplicatedActor) const
+{
+	UPrefabricatorProperty* DupProperty = NewObject<UPrefabricatorProperty>(DuplicatedActor);
+	DupProperty->PropertyName = PropertyName;
+	DupProperty->ExportedValue = ExportedValue;
+	DupProperty->AssetSoftReferenceMappings = AssetSoftReferenceMappings;
+	return DupProperty;
+}
+
+FPrefabricatorComponentData FPrefabricatorComponentData::Clone(AActor* DuplicatedActor) const
+{
+	FPrefabricatorComponentData Duplicate;
+	Duplicate.RelativeTransform = RelativeTransform;
+	Duplicate.ComponentName = ComponentName;
+	for (UPrefabricatorProperty* Property : Properties)
+	{
+		UPrefabricatorProperty* DupProperty = Property->Clone(DuplicatedActor);
+		Duplicate.Properties.Add(DupProperty);
+	}
+	return Duplicate;
+}
+
+FPrefabricatorActorData FPrefabricatorActorData::Clone(AActor* DuplicatedActor) const
+{
+	FPrefabricatorActorData Duplicate;
+	Duplicate.PrefabItemID = PrefabItemID;
+	Duplicate.RelativeTransform = RelativeTransform;
+	Duplicate.ClassPath = ClassPath;
+	Duplicate.ClassPathRef = ClassPathRef;
+	Duplicate.RandomizationSettings = RandomizationSettings;
+	for (UPrefabricatorProperty* Property : Properties)
+	{
+		UPrefabricatorProperty* DupProperty = Property->Clone(DuplicatedActor);
+		Duplicate.Properties.Add(DupProperty);
+	}
+	for (const FPrefabricatorComponentData& ComponentData : Components)
+	{
+		FPrefabricatorComponentData DupComponentData = ComponentData.Clone(DuplicatedActor);
+		Duplicate.Components.Add(DupComponentData);
+	}
+	return Duplicate;
 }
 

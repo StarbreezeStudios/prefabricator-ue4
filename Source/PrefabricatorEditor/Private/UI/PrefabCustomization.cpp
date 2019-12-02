@@ -104,26 +104,53 @@ void FPrefabActorCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 				.Text(LOCTEXT("PrefabCommand_LoadFromAsset", "Load Prefab from Asset"))
 				.OnClicked(FOnClicked::CreateStatic(&FPrefabActorCustomization::HandleLoadFromAsset, &DetailBuilder))
 			]
-
 		];
 
 		Category.AddCustomRow(LOCTEXT("PrefabCommandRandomize_Filter", "randomize prefab collection asset"))
-			.WholeRowContent()
+		.WholeRowContent()
+		[
+			SNew(SHorizontalBox)
+			+ SHorizontalBox::Slot()
+			.VAlign(VAlign_Center)
+			.FillWidth(1.0f)
 			[
 				SNew(SButton)
 				.Text(LOCTEXT("PrefabCommand_RandomizeCollection", "Randomize"))
-				.OnClicked(FOnClicked::CreateStatic(&FPrefabActorCustomization::RandomizePrefabCollection, &DetailBuilder))
-			];
-
+				.OnClicked(FOnClicked::CreateStatic(&FPrefabActorCustomization::RandomizePrefab, &DetailBuilder))
+			]
+			+ SHorizontalBox::Slot()
+			.VAlign(VAlign_Center)
+			.FillWidth(1.0f)
+			[
+				SNew(SButton)
+				.Text(LOCTEXT("PrefabCommand_NoRandomizeCollection", "Unrandomize"))
+				.OnClicked(FOnClicked::CreateStatic(&FPrefabActorCustomization::UnrandomizePrefab, &DetailBuilder))
+			]
+		];
 
 		Category.AddCustomRow(LOCTEXT("PrefabCommandUnlink_Filter", "unlink prefab"))
-			.WholeRowContent()
+		.WholeRowContent()
+		[
+			SNew(SHorizontalBox)
+			+ SHorizontalBox::Slot()
+			.VAlign(VAlign_Center)
+			.FillWidth(1.0f)
+			//.Padding(4.0f)
 			[
 				SNew(SButton)
 				.Text(LOCTEXT("PrefabCommand_Unlink", "Unlink"))
-			.OnClicked(FOnClicked::CreateStatic(&FPrefabActorCustomization::UnlinkPrefab, &DetailBuilder))
-			];
-
+				.OnClicked(FOnClicked::CreateStatic(&FPrefabActorCustomization::UnlinkPrefab, &DetailBuilder, false))
+			]
+			+ SHorizontalBox::Slot()
+			.VAlign(VAlign_Center)
+			.FillWidth(1.0f)
+			//.Padding(4.0f)
+			[
+				SNew(SButton)
+				.Text(LOCTEXT("PrefabCommand_Unlink_Recurse", "Unlink Recursive"))
+				.OnClicked(FOnClicked::CreateStatic(&FPrefabActorCustomization::UnlinkPrefab, &DetailBuilder, true))
+			]
+		];
 
 		DetailBuilder.HideProperty(GET_MEMBER_NAME_CHECKED(APrefabActor, Seed));
 	}
@@ -131,14 +158,43 @@ void FPrefabActorCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 		IDetailCategoryBuilder& Category = DetailBuilder.EditCategory("Prefab Collection Actions", FText::GetEmpty(), ECategoryPriority::Important);
 		Category.AddExternalObjectProperty(PrefabComponents, GET_MEMBER_NAME_CHECKED(UPrefabComponent, PrefabAssetInterface));
 
+		for (UObject* PrefabObject : PrefabComponents)
+		{
+			UPrefabComponent* PrefabComp = CastChecked<UPrefabComponent>(PrefabObject);
+			if (PrefabComp)
+			{
+				UPrefabricatorAssetInterface * Asset = PrefabComp->PrefabAssetInterface.LoadSynchronous();
+				if (Asset && Asset->IsA<UPrefabricatorAssetCollection>())
+				{
+					UPrefabricatorAssetCollection* Collection = CastChecked<UPrefabricatorAssetCollection>(Asset);
+					TArray<UObject*> SubAssets;
+					SubAssets.Add(Collection);
+					Category.AddExternalObjectProperty(SubAssets, GET_MEMBER_NAME_CHECKED(UPrefabricatorAssetCollection, Prefabs))->IsEnabled(false);
+				}
+			}
+		}
 		Category.AddProperty(GET_MEMBER_NAME_CHECKED(APrefabActor, Seed));
 			
 		Category.AddCustomRow(LOCTEXT("PrefabCollectionCommandRandomize_Filter", "randomize prefab collection asset"))
 		.WholeRowContent()
 		[
-			SNew(SButton)
-			.Text(LOCTEXT("PrefabCollectionCommand_RandomizeCollection", "Randomize"))
-			.OnClicked(FOnClicked::CreateStatic(&FPrefabActorCustomization::RandomizePrefabCollection, &DetailBuilder))
+			SNew(SHorizontalBox)
+			+ SHorizontalBox::Slot()
+			.VAlign(VAlign_Center)
+			.FillWidth(1.0f)
+			[
+				SNew(SButton)
+				.Text(LOCTEXT("PrefabCollectionCommand_RandomizeCollection", "Randomize"))
+				.OnClicked(FOnClicked::CreateStatic(&FPrefabActorCustomization::RandomizePrefab, &DetailBuilder))
+			]
+			+ SHorizontalBox::Slot()
+			.VAlign(VAlign_Center)
+			.FillWidth(1.0f)
+			[
+				SNew(SButton)
+				.Text(LOCTEXT("PrefabCommand_NoRandomizeCollection", "Unrandomize"))
+				.OnClicked(FOnClicked::CreateStatic(&FPrefabActorCustomization::UnrandomizePrefab, &DetailBuilder))
+			]
 		];
 
 		Category.AddCustomRow(LOCTEXT("PrefabCollectionCommand_Filter", "load prefab collection asset"))
@@ -149,6 +205,29 @@ void FPrefabActorCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 			.OnClicked(FOnClicked::CreateStatic(&FPrefabActorCustomization::HandleLoadFromAsset, &DetailBuilder))
 		];
 
+		Category.AddCustomRow(LOCTEXT("PrefabCommandUnlink_Filter", "unlink prefab"))
+		.WholeRowContent()
+		[
+			SNew(SHorizontalBox)
+			+ SHorizontalBox::Slot()
+			.VAlign(VAlign_Center)
+			.FillWidth(1.0f)
+			//.Padding(4.0f)
+			[
+				SNew(SButton)
+				.Text(LOCTEXT("PrefabCommand_Unlink", "Unlink"))
+				.OnClicked(FOnClicked::CreateStatic(&FPrefabActorCustomization::UnlinkPrefab, &DetailBuilder, false))
+			]
+			+ SHorizontalBox::Slot()
+			.VAlign(VAlign_Center)
+			.FillWidth(1.0f)
+			//.Padding(4.0f)
+			[
+				SNew(SButton)
+				.Text(LOCTEXT("PrefabCommand_Unlink_Recurse", "Unlink Recursive"))
+				.OnClicked(FOnClicked::CreateStatic(&FPrefabActorCustomization::UnlinkPrefab, &DetailBuilder, true))
+			]
+		];
 	}
 }
 
@@ -208,7 +287,7 @@ FReply FPrefabActorCustomization::HandleLoadFromAsset(IDetailLayoutBuilder* Deta
 	return FReply::Handled();
 }
 
-FReply FPrefabActorCustomization::RandomizePrefabCollection(IDetailLayoutBuilder* DetailBuilder)
+FReply FPrefabActorCustomization::RandomizePrefab(IDetailLayoutBuilder* DetailBuilder)
 {
 	TArray<APrefabActor*> PrefabActors = GetDetailObject<APrefabActor>(DetailBuilder);
 	for (APrefabActor* PrefabActor : PrefabActors) {
@@ -220,19 +299,34 @@ FReply FPrefabActorCustomization::RandomizePrefabCollection(IDetailLayoutBuilder
 			FPrefabLoadSettings LoadSettings;
 			LoadSettings.bRandomizeNestedSeed = true;
 			LoadSettings.Random = &Random;
-			FPrefabTools::LoadStateFromPrefabAsset(PrefabActor, LoadSettings);
+			FPrefabTools::RandomizeState(PrefabActor, LoadSettings);
 		}
 	}
 	return FReply::Handled();
 }
 
-FReply FPrefabActorCustomization::UnlinkPrefab(IDetailLayoutBuilder* DetailBuilder)
+FReply FPrefabActorCustomization::UnrandomizePrefab(IDetailLayoutBuilder* DetailBuilder)
+{
+	TArray<APrefabActor*> PrefabActors = GetDetailObject<APrefabActor>(DetailBuilder);
+	for (APrefabActor* PrefabActor : PrefabActors) {
+		if (PrefabActor) {
+			PrefabActor->Seed = -1;
+
+			FPrefabLoadSettings LoadSettings;
+			LoadSettings.bRandomizeNestedSeed = true;
+			FPrefabTools::RandomizeState(PrefabActor, LoadSettings);
+		}
+	}
+	return FReply::Handled();
+}
+
+FReply FPrefabActorCustomization::UnlinkPrefab(IDetailLayoutBuilder* DetailBuilder, bool bRecursive)
 {
 
 	TArray<APrefabActor*> PrefabActors = GetDetailObject<APrefabActor>(DetailBuilder);
 	for (APrefabActor* PrefabActor : PrefabActors) {
 		if (PrefabActor) {
-			FPrefabTools::UnlinkAndDestroyPrefabActor(PrefabActor);
+			FPrefabTools::UnlinkAndDestroyPrefabActor(PrefabActor, bRecursive);
 		}
 	}
 	return FReply::Handled();

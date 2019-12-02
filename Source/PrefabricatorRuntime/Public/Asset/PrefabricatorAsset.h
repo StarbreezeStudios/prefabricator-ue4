@@ -5,38 +5,40 @@
 #include "Engine/EngineTypes.h"
 #include "PrefabricatorAsset.generated.h"
 
-USTRUCT(Blueprintable) // SBZ stephane.maruejouls - allow edition
+USTRUCT(Blueprintable)
 struct PREFABRICATORRUNTIME_API FPrefabricatorPropertyAssetMapping {
 	GENERATED_BODY()
 
-	UPROPERTY(EditAnywhere, Category = "Prefabricator") // SBZ stephane.maruejouls - allow edition
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Prefabricator")
 	FSoftObjectPath AssetReference;
 
-	UPROPERTY(EditAnywhere, Category = "Prefabricator") // SBZ stephane.maruejouls - allow edition
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Prefabricator")
 	FString AssetClassName;
 
-	UPROPERTY(EditAnywhere, Category = "Prefabricator") // SBZ stephane.maruejouls - allow edition
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Prefabricator")
 	FName AssetObjectPath;
 
-	UPROPERTY(EditAnywhere, Category = "Prefabricator") // SBZ stephane.maruejouls - allow edition
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Prefabricator")
 	bool bUseQuotes = false;
 };
 
-UCLASS(Blueprintable) // SBZ stephane.maruejouls - allow edition
+UCLASS(Blueprintable)
 class PREFABRICATORRUNTIME_API UPrefabricatorProperty : public UObject {
 	GENERATED_BODY()
 public:
-	UPROPERTY(EditAnywhere, Category = "Prefabricator") // SBZ stephane.maruejouls - allow edition
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Prefabricator")
 	FString PropertyName;
 
-	UPROPERTY(EditAnywhere, Category = "Prefabricator") // SBZ stephane.maruejouls - allow edition
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Prefabricator")
 	FString ExportedValue;
 
-	UPROPERTY(EditAnywhere, Category = "Prefabricator") // SBZ stephane.maruejouls - allow edition
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Prefabricator")
 	TArray<FPrefabricatorPropertyAssetMapping> AssetSoftReferenceMappings;
 
 	void SaveReferencedAssetValues();
 	void LoadReferencedAssetValues();
+
+	UPrefabricatorProperty* Clone(AActor* DuplicatedActor) const;
 };
 
 USTRUCT(Blueprintable) // SBZ stephane.maruejouls - allow edition
@@ -46,35 +48,26 @@ struct PREFABRICATORRUNTIME_API FPrefabricatorComponentData {
 	UPROPERTY(EditAnywhere, Category = "Prefabricator") // SBZ stephane.maruejouls - allow edition
 	FTransform RelativeTransform;
 
-	UPROPERTY(EditAnywhere, Category = "Prefabricator") // SBZ stephane.maruejouls - allow edition
+	UPROPERTY(BlueprintReadOnly, Category = "Prefabricator") // SBZ stephane.maruejouls - allow edition
 	FString ComponentName;
 
-	UPROPERTY(EditAnywhere, Category = "Prefabricator") // SBZ stephane.maruejouls - allow edition
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Prefabricator")
 	TArray<UPrefabricatorProperty*> Properties;
+
+	FPrefabricatorComponentData Clone(AActor* DuplicatedActor) const;
 };
 
-USTRUCT(Blueprintable) // SBZ stephane.maruejouls - allow edition
-struct PREFABRICATORRUNTIME_API FPrefabricatorActorData {
+
+USTRUCT(Blueprintable)
+struct PREFABRICATORRUNTIME_API FPrefabricatorRandomData {
 	GENERATED_USTRUCT_BODY()
 
-	UPROPERTY(EditAnywhere, Category = "Prefabricator") // SBZ stephane.maruejouls - allow edition
-	FGuid PrefabItemID;
-
-	UPROPERTY(EditAnywhere, Category = "Prefabricator") // SBZ stephane.maruejouls - allow edition
-	FTransform RelativeTransform;
-
-	// SBZ stephane.maruejouls - allow Random placement
 	UPROPERTY(EditAnywhere, Category = "Prefabricator")
 	bool bRandomizeTransform = false;
 
-	UPROPERTY(EditAnywhere, Category = "Prefabricator", meta = (EditCondition = "bRandomizeTransform"))
-	FVector OffsetVariation = FVector::ZeroVector;
+	UPROPERTY(EditAnywhere, Category = "Prefabricator", meta = (EditCondition = "bRandomizeTransform", MakeEditWidget = ""))
+	FTransform Offset = FTransform::Identity;
 
-	UPROPERTY(EditAnywhere, Category = "Prefabricator", meta = (EditCondition = "bRandomizeTransform"))
-	FRotator OffsetRotation = FRotator::ZeroRotator;
-	// SBZ
-
-	// SBZ stephane.maruejouls - allow Snapping when random
 	UPROPERTY(EditAnywhere, Category = "Prefabricator", meta = (EditCondition = "bRandomizeTransform"))
 	bool bRandomGridSnapping = false;
 
@@ -86,29 +79,42 @@ struct PREFABRICATORRUNTIME_API FPrefabricatorActorData {
 
 	UPROPERTY(EditAnywhere, Category = "Prefabricator", meta = (EditCondition = "bRandomAngleSnapping"))
 	float AngleSnap = 45.f;
-	// SBZ
+
+	UPROPERTY(EditAnywhere, Category = "Prefabricator") 
+	float Weight = 1.f;
+};
+
+USTRUCT(Blueprintable) // SBZ stephane.maruejouls - allow edition
+struct PREFABRICATORRUNTIME_API FPrefabricatorActorData {
+	GENERATED_USTRUCT_BODY()
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Prefabricator") // SBZ stephane.maruejouls - allow edition
+	FGuid PrefabItemID;
 
 	UPROPERTY(EditAnywhere, Category = "Prefabricator") // SBZ stephane.maruejouls - allow edition
+	FTransform RelativeTransform;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Prefabricator") // SBZ stephane.maruejouls - allow edition
 	FString ClassPath;
 
-	UPROPERTY(EditAnywhere, Category = "Prefabricator") // SBZ stephane.maruejouls - allow edition
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Prefabricator")
 	FSoftClassPath ClassPathRef; 
 
-	UPROPERTY(EditAnywhere, Category = "Prefabricator") // SBZ stephane.maruejouls - allow edition
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Prefabricator")
 	TArray<UPrefabricatorProperty*> Properties;
 
-	UPROPERTY(EditAnywhere, Category = "Prefabricator") // SBZ stephane.maruejouls - allow edition
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Prefabricator")
 	TArray<FPrefabricatorComponentData> Components;
 
-	// SBZ stephane.maruejouls - allow None
-	UPROPERTY(EditAnywhere, Category = "Prefabricator") // SBZ stephane.maruejouls - allow edition
-	float Weight = 1.f;
-	// SBZ
+	UPROPERTY(EditAnywhere, Category = "Randomization") // SBZ stephane.maruejouls - allow edition
+	FPrefabricatorRandomData RandomizationSettings;
 
 #if WITH_EDITORONLY_DATA
 	UPROPERTY(EditAnywhere, Category = "Prefabricator") // SBZ stephane.maruejouls - allow edition
 	FString ActorName;
 #endif // WITH_EDITORONLY_DATA
+
+	FPrefabricatorActorData Clone(AActor* DuplicatedActor) const;
 };
 
 struct FPrefabAssetSelectionConfig {

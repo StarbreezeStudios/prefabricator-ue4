@@ -169,6 +169,17 @@ void APrefabActor::HandleBuildComplete()
 	}
 }
 
+FPrefabricatorActorData* APrefabActor::GetActorData(const FGuid& ActorID)
+{
+	for (FPrefabricatorActorData& ActorItemData : ActorData)
+	{
+		if (ActorItemData.PrefabItemID == ActorID)
+		{
+			return &ActorItemData;
+		}
+	}
+	return nullptr;
+}
 ////////////////////////////////// FPrefabBuildSystem //////////////////////////////////
 FPrefabBuildSystem::FPrefabBuildSystem(double InTimePerFrame)
 	: TimePerFrame(InTimePerFrame)

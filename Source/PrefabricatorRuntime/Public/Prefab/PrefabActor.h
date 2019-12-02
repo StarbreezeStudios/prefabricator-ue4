@@ -4,7 +4,19 @@
 #include "CoreMinimal.h"
 #include "Engine/AssetUserData.h"
 #include "GameFramework/Actor.h"
+#include "Asset/PrefabricatorAsset.h"
 #include "PrefabActor.generated.h"
+
+USTRUCT(Blueprintable)
+struct PREFABRICATORRUNTIME_API FPrefabricatorSpawnedInfos {
+	GENERATED_USTRUCT_BODY()
+
+	UPROPERTY(VisibleAnywhere, Category = "Prefabricator")
+	FTransform RelativeTransform;
+
+	UPROPERTY(VisibleAnywhere, Category = "Prefabricator")
+	FTransform OriginalTransform;
+};
 
 UCLASS(Blueprintable, ConversionRoot, ComponentWrapperClass)
 class PREFABRICATORRUNTIME_API APrefabActor : public AActor {
@@ -49,7 +61,20 @@ public:
 	FGuid LastUpdateID;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Prefabricator")
-	int32 Seed;
+	int32 Seed = -1;
+
+#if WITH_EDITORONLY_DATA
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Prefabricator")
+	TMap<FGuid,FPrefabricatorRandomData> ActorRandomDataOverrides;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Prefabricator")
+	TMap<FGuid,FPrefabricatorSpawnedInfos> SpawnedInfos;
+
+	UPROPERTY(EditAnywhere, Category = "Prefabricator")
+	TArray<FPrefabricatorActorData> ActorData;
+#endif
+
+
 };
 
 /////////////////////////////// BuildSystem /////////////////////////////// 

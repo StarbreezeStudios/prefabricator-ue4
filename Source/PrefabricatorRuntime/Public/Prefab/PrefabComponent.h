@@ -7,6 +7,7 @@
 
 class UPrefabricatorAsset;
 class UPrefabricatorAssetInterface;
+class UTexture2D;
 
 UCLASS(Blueprintable)
 class PREFABRICATORRUNTIME_API UPrefabComponent : public USceneComponent {

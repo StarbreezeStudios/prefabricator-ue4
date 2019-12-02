@@ -4,6 +4,7 @@
 
 #include "Asset/PrefabricatorAsset.h"
 #include "Asset/PrefabricatorAssetBroker.h"
+#include "Asset/PrefabricatorAssetUserData.h"
 #include "Asset/PrefabricatorAssetTypeActions.h"
 #include "Asset/Thumbnail/PrefabricatorAssetThumbnailRenderer.h"
 #include "Prefab/PrefabTools.h"
@@ -66,8 +67,8 @@ class FPrefabricatorEditorModule : public IPrefabricatorEditorModule
 		UThumbnailManager::Get().RegisterCustomRenderer(UPrefabricatorAsset::StaticClass(), UPrefabricatorAssetThumbnailRenderer::StaticClass());
 	}
 
-	virtual void ShutdownModule() override {
 
+	virtual void ShutdownModule() override {
 		// Unregister the prefabricator asset broker
 		if (PrefabAssetBroker.IsValid()) {
 			FComponentAssetBrokerage::UnregisterBroker(PrefabAssetBroker);
