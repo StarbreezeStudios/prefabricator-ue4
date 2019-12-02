@@ -517,7 +517,7 @@ void FPrefabTools::LoadStateFromPrefabAsset(AActor* InActor, const FPrefabricato
 
 }
 
-void FPrefabTools::UnlinkAndDestroyPrefabActor(APrefabActor* PrefabActor)
+void FPrefabTools::UnlinkAndDestroyPrefabActor(APrefabActor* PrefabActor, const FString& FolderPath, bool bRecursive)
 {
 	TSharedPtr<IPrefabricatorService> Service = FPrefabricatorService::Get();
 	if (Service.IsValid()) {
@@ -532,6 +532,18 @@ void FPrefabTools::UnlinkAndDestroyPrefabActor(APrefabActor* PrefabActor)
 	for (AActor* ChildActor: ChildActors) {
 		ChildActor->DetachFromActor(FDetachmentTransformRules(EDetachmentRule::KeepWorld, true));
 		ChildActor->GetRootComponent()->RemoveUserDataOfClass(UPrefabricatorAssetUserData::StaticClass());
+		if (bRecursive)
+		{
+			APrefabActor* ChildPrefabActor = Cast<APrefabActor>(ChildActor);
+			if (ChildPrefabActor)
+			{
+				UnlinkAndDestroyPrefabActor(ChildPrefabActor, FolderPath, true);
+			}
+		}
+		if (FolderPath != "/")
+		{
+			ChildActor->SetFolderPath(*FolderPath);
+		}
 	}
 
 	// Finally delete the prefab actor
