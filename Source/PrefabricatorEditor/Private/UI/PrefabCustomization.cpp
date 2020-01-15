@@ -186,6 +186,21 @@ void FPrefabActorCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 			]
 		];
 	}
+
+
+	const UPrefabricatorSettings* PS = GetDefault<UPrefabricatorSettings>();
+	if (!PS->bShowAssetThumbnails)
+	{
+		// Add an option to save the viewport image as a thumbnail for the asset
+		IDetailCategoryBuilder& Category = DetailBuilder.EditCategory("Prefab Collection Actions", FText::GetEmpty(), ECategoryPriority::Important);
+		Category.AddCustomRow(LOCTEXT("PrefabThumb_Filter", "thumbnail thumb"))
+			.WholeRowContent()
+			[
+				SNew(SButton)
+				.Text(LOCTEXT("PrefabThumbCommand_SaveThumbnail", "Update Thumbnail"))
+			.OnClicked(FOnClicked::CreateStatic(&FPrefabActorCustomization::UpdateThumbFromViewport, &DetailBuilder))
+			];
+	}
 }
 
 TSharedRef<IDetailCustomization> FPrefabActorCustomization::MakeInstance()
@@ -277,6 +292,23 @@ FReply FPrefabActorCustomization::UnlinkPrefab(IDetailLayoutBuilder* DetailBuild
 			{
 				FString FolderPath = PrefabActor->GetFolderPath().ToString() + "/" + PrefabActor->GetName();
 				FPrefabTools::UnlinkAndDestroyPrefabActor(PrefabActor, FolderPath, bRecursive);
+			}
+		}
+	}
+	return FReply::Handled();
+}
+
+FReply FPrefabActorCustomization::UpdateThumbFromViewport(IDetailLayoutBuilder* DetailBuilder)
+{
+	if (GEditor) {
+		TArray<APrefabActor*> PrefabActors = GetDetailObject<APrefabActor>(DetailBuilder);
+		for (APrefabActor* PrefabActor : PrefabActors) {
+			if (PrefabActor) {
+				UPrefabricatorAsset* Asset = PrefabActor->GetPrefabAsset();
+				IContentBrowserSingleton& ContentBrowser = FModuleManager::LoadModuleChecked<FContentBrowserModule>("ContentBrowser").Get();
+				TArray<FAssetData> AssetList;
+				AssetList.Add(FAssetData(Asset));
+				ContentBrowser.CaptureThumbnailFromViewport(GEditor->GetActiveViewport(), AssetList);
 			}
 		}
 	}
