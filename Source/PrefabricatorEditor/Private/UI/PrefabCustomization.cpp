@@ -6,6 +6,7 @@
 #include "Prefab/PrefabActor.h"
 #include "Prefab/PrefabComponent.h"
 #include "Prefab/PrefabTools.h"
+#include "Instancing/PrefabInstancingActor.h"
 #include "Prefab/Random/PrefabRandomizerActor.h"
 #include "PrefabricatorEditorModule.h"
 #include "PrefabricatorSettings.h"
@@ -20,6 +21,11 @@
 #include "Modules/ModuleManager.h"
 #include "Widgets/Input/SButton.h"
 #include "Widgets/SBoxPanel.h"
+
+#include "Components/InstancedStaticMeshComponent.h"
+#include "Components/HierarchicalInstancedStaticMeshComponent.h"
+#include "Engine/StaticMeshActor.h"
+#include "Kismet/GameplayStatics.h"
 
 #define LOCTEXT_NAMESPACE "PrefabActorCustomization" 
 
@@ -138,6 +144,39 @@ void FPrefabActorCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 			]
 		];
 
+		Category.AddCustomRow(LOCTEXT("PrefabCommandInstance_Filter", "instancing"))
+		.WholeRowContent()
+		[
+			SNew(SHorizontalBox)
+			+ SHorizontalBox::Slot()
+			.VAlign(VAlign_Center)
+			.FillWidth(1.0f)
+			//.Padding(4.0f)
+			[
+				SNew(SButton)
+				.Text(LOCTEXT("PrefabCommand_Instancing", "Instanced"))
+				.OnClicked(FOnClicked::CreateStatic(&FPrefabActorCustomization::MakeInstances, &DetailBuilder, false))
+			]
+			+ SHorizontalBox::Slot()
+			.VAlign(VAlign_Center)
+			.FillWidth(1.0f)
+			//.Padding(4.0f)
+			[
+				SNew(SButton)
+				.Text(LOCTEXT("PrefabCommand_Hierachical", "Hierarchical"))
+				.OnClicked(FOnClicked::CreateStatic(&FPrefabActorCustomization::MakeInstances, &DetailBuilder, true))
+			]
+			+ SHorizontalBox::Slot()
+			.VAlign(VAlign_Center)
+			.FillWidth(1.0f)
+			//.Padding(4.0f)
+			[
+				SNew(SButton)
+				.Text(LOCTEXT("PrefabCommand_StaticMesh", "StaticMesh"))
+				.OnClicked(FOnClicked::CreateStatic(&FPrefabActorCustomization::MakeStaticMeshes, &DetailBuilder))
+			]
+		];
+
 		DetailBuilder.HideProperty(GET_MEMBER_NAME_CHECKED(APrefabActor, Seed));
 	}
 	else {
@@ -185,6 +224,21 @@ void FPrefabActorCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 				.OnClicked(FOnClicked::CreateStatic(&FPrefabActorCustomization::UnlinkPrefab, &DetailBuilder, true))
 			]
 		];
+	}
+
+
+	const UPrefabricatorSettings* PS = GetDefault<UPrefabricatorSettings>();
+	if (!PS->bShowAssetThumbnails)
+	{
+		// Add an option to save the viewport image as a thumbnail for the asset
+		IDetailCategoryBuilder& Category = DetailBuilder.EditCategory("Prefab Collection Actions", FText::GetEmpty(), ECategoryPriority::Important);
+		Category.AddCustomRow(LOCTEXT("PrefabThumb_Filter", "thumbnail thumb"))
+			.WholeRowContent()
+			[
+				SNew(SButton)
+				.Text(LOCTEXT("PrefabThumbCommand_SaveThumbnail", "Update Thumbnail"))
+			.OnClicked(FOnClicked::CreateStatic(&FPrefabActorCustomization::UpdateThumbFromViewport, &DetailBuilder))
+			];
 	}
 }
 
@@ -283,6 +337,168 @@ FReply FPrefabActorCustomization::UnlinkPrefab(IDetailLayoutBuilder* DetailBuild
 	return FReply::Handled();
 }
 
+FReply FPrefabActorCustomization::UpdateThumbFromViewport(IDetailLayoutBuilder* DetailBuilder)
+{
+	if (GEditor) {
+		TArray<APrefabActor*> PrefabActors = GetDetailObject<APrefabActor>(DetailBuilder);
+		for (APrefabActor* PrefabActor : PrefabActors) {
+			if (PrefabActor) {
+				UPrefabricatorAsset* Asset = PrefabActor->GetPrefabAsset();
+				IContentBrowserSingleton& ContentBrowser = FModuleManager::LoadModuleChecked<FContentBrowserModule>("ContentBrowser").Get();
+				TArray<FAssetData> AssetList;
+				AssetList.Add(FAssetData(Asset));
+				ContentBrowser.CaptureThumbnailFromViewport(GEditor->GetActiveViewport(), AssetList);
+			}
+		}
+	}
+	return FReply::Handled();
+}
+
+
+FReply FPrefabActorCustomization::MakeInstances(IDetailLayoutBuilder* DetailBuilder, bool bHierarchical)
+{
+	TArray<APrefabActor*> PrefabActors = GetDetailObject<APrefabActor>(DetailBuilder);
+	for (APrefabActor* PrefabActor : PrefabActors) 
+	{
+		if (PrefabActor) 
+		{
+			TArray<AActor*> Children;
+			PrefabActor->GetAttachedActors(Children);
+
+			TMap<UStaticMesh*, APrefabInstancingActor*> InstancedActorMap;
+
+			if (Children.Num() > 0)
+			{
+				UWorld* World = PrefabActor->GetWorld();
+				for (AActor* Actor : Children)
+				{
+					if (APrefabInstancingActor* Instance = Cast<APrefabInstancingActor>(Actor))
+					{
+						if (bHierarchical  && !Instance->bISM && ::IsValid(Instance->InstancedStaticMesh))
+						{
+							InstancedActorMap.Add(Instance->InstancedStaticMesh->GetStaticMesh(), Instance);
+						}
+						if (!bHierarchical  && Instance->bISM && ::IsValid(Instance->HierarchicalInstancedStaticMesh))
+						{
+							InstancedActorMap.Add(Instance->HierarchicalInstancedStaticMesh->GetStaticMesh(), Instance);
+						}
+					}
+				}
+				for (AActor* Actor : Children)
+				{
+					if (AStaticMeshActor* ChildSM = Cast<AStaticMeshActor>(Actor))
+					{
+						UStaticMesh* SM = ChildSM->GetStaticMeshComponent()->GetStaticMesh();
+						if (::IsValid(SM))
+						{
+							auto FoundInstance = InstancedActorMap.Find(SM);
+							APrefabInstancingActor* Instance = nullptr;
+							if (!FoundInstance)
+							{
+								FTransform InstanceTransform = PrefabActor->GetActorTransform();
+								InstanceTransform.SetScale3D(FVector::OneVector);
+								InstanceTransform.SetRotation(FQuat::Identity);
+								Instance = World->SpawnActorDeferred<APrefabInstancingActor>(APrefabInstancingActor::StaticClass(), InstanceTransform, nullptr, nullptr, ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
+								if (!bHierarchical)
+								{
+									Instance->bISM = true;
+									Instance->InstancedStaticMesh->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+									Instance->InstancedStaticMesh->SetStaticMesh(SM);
+								}
+								else
+								{
+									Instance->bISM = false;
+									Instance->HierarchicalInstancedStaticMesh->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+									Instance->HierarchicalInstancedStaticMesh->SetStaticMesh(SM);
+								}
+								size_t index = 0;
+								for (UMaterialInterface* Material : ChildSM->GetStaticMeshComponent()->GetMaterials())
+								{
+									if (bHierarchical)
+									{
+										Instance->HierarchicalInstancedStaticMesh->SetMaterial(index++, Material);
+									}
+									else
+									{
+										Instance->InstancedStaticMesh->SetMaterial(index++, Material);
+									}
+								}
+								UGameplayStatics::FinishSpawningActor(Instance, InstanceTransform);
+								Instance->AttachToActor(PrefabActor, FAttachmentTransformRules(EAttachmentRule::KeepWorld, true));
+								InstancedActorMap.Add(SM, Instance);
+							}
+							else
+							{
+								Instance = *FoundInstance;
+							}
+							FTransform InstanceLocal = ChildSM->GetActorTransform();
+							InstanceLocal.SetLocation(InstanceLocal.GetLocation() - Instance->GetActorLocation());
+							if( bHierarchical )
+							{
+								Instance->HierarchicalInstancedStaticMesh->AddInstance(InstanceLocal);
+							}
+							else
+							{
+								Instance->InstancedStaticMesh->AddInstance(InstanceLocal);
+							}
+							Instance->AddReferenceToActor(ChildSM);
+						}
+					}
+				}
+				for(TTuple<UStaticMesh*, APrefabInstancingActor*> TupleInstance : InstancedActorMap)
+				{
+					auto Instance = TupleInstance.Value;
+					Instance->Cleanup(bHierarchical ? Instance->HierarchicalInstancedStaticMesh->GetInstanceCount() < 2 : Instance->InstancedStaticMesh->GetInstanceCount() < 2);
+				}
+			}
+		}
+	}
+	return FReply::Handled();
+}
+
+FReply FPrefabActorCustomization::MakeHierarchicalInstances(IDetailLayoutBuilder* DetailBuilder)
+{
+	return FReply::Handled();
+}
+
+FReply FPrefabActorCustomization::MakeStaticMeshes(IDetailLayoutBuilder* DetailBuilder)
+{
+	TArray<APrefabActor*> PrefabActors = GetDetailObject<APrefabActor>(DetailBuilder);
+	for (APrefabActor* PrefabActor : PrefabActors)
+	{
+		if (PrefabActor)
+		{
+			UWorld* World = PrefabActor->GetWorld();
+			TArray<AActor*> Children;
+			PrefabActor->GetAttachedActors(Children);
+			for (AActor* Child : Children)
+			{
+				if (APrefabInstancingActor* Instance = Cast<APrefabInstancingActor>(Child))
+				{
+					UInstancedStaticMeshComponent* InstancedSM = Instance->bISM ? Instance->InstancedStaticMesh : Instance->HierarchicalInstancedStaticMesh;
+					for (int32 idx = 0; idx < InstancedSM->GetInstanceCount(); ++idx)
+					{
+						FTransform Transform;
+						InstancedSM->GetInstanceTransform(idx,Transform, true);
+						AStaticMeshActor* SMActor = World->SpawnActor<AStaticMeshActor>(AStaticMeshActor::StaticClass(), Transform);
+						SMActor->GetStaticMeshComponent()->SetStaticMesh(InstancedSM->GetStaticMesh());
+						auto Materials = InstancedSM->GetMaterials();
+						int MaterialIdx = 0;
+						for (UMaterialInterface* Material : Materials)
+						{
+							SMActor->GetStaticMeshComponent()->SetMaterial(MaterialIdx++, Material);
+						}
+						SMActor->AttachToActor(PrefabActor, FAttachmentTransformRules(EAttachmentRule::KeepWorld, true));
+					}
+				}
+				Child->Destroy();
+			}
+		}
+	}
+	return FReply::Handled();
+}
+
+
 ///////////////////////////////// FPrefabRandomizerCustomization /////////////////////////////////
 
 void FPrefabRandomizerCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuilder)
@@ -318,6 +534,7 @@ FReply FPrefabRandomizerCustomization::HandleRandomize(IDetailLayoutBuilder* Det
 
 	return FReply::Handled();
 }
+
 
 #undef LOCTEXT_NAMESPACE 
 

@@ -18,6 +18,11 @@ public:
 	static FReply HandleLoadFromAsset(IDetailLayoutBuilder* DetailBuilder);
 	static FReply RandomizePrefabCollection(IDetailLayoutBuilder* DetailBuilder);
 	static FReply UnlinkPrefab(IDetailLayoutBuilder* DetailBuilder, bool bRecursive);
+	static FReply UpdateThumbFromViewport(IDetailLayoutBuilder* DetailBuilder);
+
+	static FReply MakeInstances(IDetailLayoutBuilder* DetailBuilder, bool bHierarchical);
+	static FReply MakeHierarchicalInstances(IDetailLayoutBuilder* DetailBuilder);
+	static FReply MakeStaticMeshes(IDetailLayoutBuilder* DetailBuilder);
 };
 
 class PREFABRICATOREDITOR_API FPrefabRandomizerCustomization : public IDetailCustomization {
