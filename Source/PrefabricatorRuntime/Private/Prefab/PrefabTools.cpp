@@ -540,10 +540,12 @@ void FPrefabTools::UnlinkAndDestroyPrefabActor(APrefabActor* PrefabActor, const 
 				UnlinkAndDestroyPrefabActor(ChildPrefabActor, FolderPath, true);
 			}
 		}
+#if WITH_EDITOR
 		if (FolderPath != "/")
 		{
 			ChildActor->SetFolderPath(*FolderPath);
 		}
+#endif
 	}
 
 	// Finally delete the prefab actor
