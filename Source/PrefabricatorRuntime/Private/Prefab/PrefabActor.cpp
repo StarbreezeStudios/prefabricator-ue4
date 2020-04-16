@@ -18,6 +18,7 @@ APrefabActor::APrefabActor(const FObjectInitializer& ObjectInitializer)
 {
 	PrefabComponent = ObjectInitializer.CreateDefaultSubobject<UPrefabComponent>(this, "PrefabComponent");
 	RootComponent = PrefabComponent;
+	bIsEditorOnlyActor = true;	// SBZ stephane.maruejouls - remove prefab at runtime
 }
 
 namespace {
@@ -70,6 +71,21 @@ void APrefabActor::PostActorCreated()
 }
 
 #if WITH_EDITOR
+// SBZ stephane.maruejouls - remove PrefabActor
+void APrefabActor::BeginPlay()
+{
+	Super::BeginPlay();
+	TArray<AActor*> AttachedActors;
+	GetAttachedActors(AttachedActors);
+	for (AActor* ChildActor : AttachedActors)
+	{
+		ChildActor->DetachFromActor(FDetachmentTransformRules(EDetachmentRule::KeepWorld, true));
+		ChildActor->GetRootComponent()->RemoveUserDataOfClass(UPrefabricatorAssetUserData::StaticClass());
+	}
+	Destroy();
+}
+// SBZ
+
 void APrefabActor::PostEditChangeProperty(struct FPropertyChangedEvent& e)
 {
 	Super::PostEditChangeProperty(e);
@@ -99,6 +115,19 @@ FName APrefabActor::GetCustomIconName() const
 	return PrefabIconName;
 }
 
+// SBZ stephane.maruejouls - Reports prefab assets
+bool APrefabActor::GetReferencedContentObjects(TArray<UObject*>& Objects) const
+{
+	Super::GetReferencedContentObjects(Objects);
+
+	if (PrefabComponent && PrefabComponent->PrefabAssetInterface && PrefabComponent->PrefabAssetInterface->GetPrefabAsset(FPrefabAssetSelectionConfig()))
+	{
+		Objects.Add(PrefabComponent->PrefabAssetInterface->GetPrefabAsset(FPrefabAssetSelectionConfig()));
+	}
+	return true;
+
+}
+// SBZ
 #endif // WITH_EDITOR
 
 void APrefabActor::LoadPrefab()
@@ -253,7 +282,7 @@ void AReplicablePrefabActor::GetLifetimeReplicatedProps(TArray<FLifetimeProperty
 
 void AReplicablePrefabActor::BeginPlay()
 {
-	if (Role == ROLE_Authority)
+	if (GetLocalRole() == ROLE_Authority)
 	{
 		bReplicates = false;
 		SetRemoteRoleForBackwardsCompat(ROLE_SimulatedProxy);

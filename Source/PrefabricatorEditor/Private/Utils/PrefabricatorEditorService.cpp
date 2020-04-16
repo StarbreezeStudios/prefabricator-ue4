@@ -8,7 +8,10 @@
 #include "Prefab/PrefabComponent.h"
 #include "Utils/PrefabEditorTools.h"
 
+#include "ActorFactories/ActorFactory.h"
+#include "ActorFactories/ActorFactoryBoxVolume.h"
 #include "AssetToolsModule.h"
+#include "ComponentAssetBroker.h"
 #include "Editor.h"
 #include "Editor/EditorEngine.h"
 #include "EditorViewportClient.h"
@@ -18,9 +21,6 @@
 #include "PropertyEditorModule.h"
 #include "ScopedTransaction.h"
 #include "ThumbnailRendering/SceneThumbnailInfo.h"
-#include "ActorFactories/ActorFactory.h"
-#include "ComponentAssetBroker.h"
-#include "ActorFactories/ActorFactoryBoxVolume.h"
 
 void FPrefabricatorEditorService::ParentActors(AActor* ParentActor, AActor* ChildActor)
 {
@@ -122,26 +122,45 @@ namespace {
 		PrefabStaticTransaction() = NULL;
 	}
 
+	// SBZ stephane.maruejouls - undo revamp
+	static void PrefabCancelTransaction()
+	{
+		if (PrefabStaticTransaction())
+		{
+			PrefabStaticTransaction()->Cancel();
+		}
+	}
+	// SBZ
+
 	/**
 	 * Begins a new transaction, if no outstanding transaction exists.
 	 */
-	static void PrefabBeginTransaction(const FText& Description)
+	 // SBZ stephane.maruejouls - undo revamp
+	static void PrefabBeginTransaction(const FText& Description, const bool bShouldActuallyTransact)
 	{
 		if (!PrefabStaticTransaction())
 		{
-			PrefabStaticTransaction() = new FScopedTransaction(Description);
+			PrefabStaticTransaction() = new FScopedTransaction(Description, bShouldActuallyTransact);
 		}
 	}
+	// SBZ
 } // namespace
 
-
-void FPrefabricatorEditorService::BeginTransaction(const FText& Description)
+// SBZ stephane.maruejouls - undo revamp
+void FPrefabricatorEditorService::BeginTransaction(const FText& Description, const bool bShouldActuallyTransact)
 {
-	PrefabBeginTransaction(Description);
+	PrefabBeginTransaction(Description, bShouldActuallyTransact);
 }
+// SBZ
 
 void FPrefabricatorEditorService::EndTransaction()
 {
 	PrefabEndTransaction();
 }
 
+// SBZ stephane.maruejouls - undo revamp
+void FPrefabricatorEditorService::CancelTransaction()
+{
+	PrefabCancelTransaction();
+}
+// SBZ

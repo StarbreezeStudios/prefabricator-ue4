@@ -14,8 +14,9 @@ public:
 	virtual FVector SnapToGrid(const FVector& InLocation) override;
 	virtual void SetDetailsViewObject(UObject* InObject) override;
 	virtual AActor* SpawnActor(TSubclassOf<AActor> InClass, const FTransform& InTransform, ULevel* InLevel) override;
-	virtual void BeginTransaction(const FText& Description) override;
+	virtual void BeginTransaction(const FText& Description, const bool bShouldActuallyTransact = true) override; // SBZ stephane.maruejouls - undo revamp
 	virtual void EndTransaction() override;
+	virtual void CancelTransaction() override; // SBZ stephane.maruejouls - undo revamp
 
 };
 

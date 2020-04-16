@@ -62,7 +62,7 @@ void FEditorUIExtender::Extend()
 				FSlateIcon(FPrefabEditorStyle::Get().GetStyleSetName(), "Prefabricator.ContextMenu.Icon"),
 				FUIAction
 				(
-					FExecuteAction::CreateStatic(&FPrefabTools::CreatePrefab)
+					FExecuteAction::CreateStatic(&FPrefabEditorTools::CreatePrefab) // SBZ stephane.maruejouls - save to disk
 				)
 			);
 		}

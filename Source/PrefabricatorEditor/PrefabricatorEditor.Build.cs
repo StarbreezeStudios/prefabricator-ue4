@@ -6,7 +6,6 @@ namespace UnrealBuildTool.Rules
 	{
 		public PrefabricatorEditor(ReadOnlyTargetRules Target) : base(Target)
         {
-            bFasterWithoutUnity = true;
             PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
             PublicIncludePaths.AddRange(
 				new string[] {
@@ -56,6 +55,7 @@ namespace UnrealBuildTool.Rules
 				    "ContentBrowser",
                     "Projects",
                     "PrefabricatorRuntime",
+					"MeshMergeUtilities"	// SBZ stephane.maruejouls - merging actors
 					// ... add private dependencies that you statically link with here ...
 				}
 				);

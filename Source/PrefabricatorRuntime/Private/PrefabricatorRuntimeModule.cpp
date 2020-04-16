@@ -3,12 +3,18 @@
 #include "PrefabricatorRuntimeModule.h"
 
 #include "Utils/PrefabricatorService.h"
+#include "Prefab/PrefabTools.h"	// SBZ stephane.maruejouls - remove prefab at runtime
 
 class FPrefabricatorRuntime : public IPrefabricatorRuntime
 {
 	/** IModuleInterface implementation */
 	virtual void StartupModule() override;
 	virtual void ShutdownModule() override;
+// SBZ stephane.maruejouls - remove prefab at runtime
+#if WITH_EDITOR
+	FDelegateHandle PreSaveHandle;
+#endif
+// SBZ
 };
 
 IMPLEMENT_MODULE(FPrefabricatorRuntime, PrefabricatorRuntime)
@@ -20,6 +26,11 @@ void FPrefabricatorRuntime::StartupModule()
 	if (!FPrefabricatorService::Get().IsValid()) {
 		FPrefabricatorService::Set(MakeShareable(new FPrefabricatorRuntimeService));
 	}
+// SBZ stephane.maruejouls - remove prefab at runtime
+#if WITH_EDITOR
+	PreSaveHandle = FEditorDelegates::PreSaveWorld.AddStatic(FPrefabTools::CleanupBeforeSave);
+#endif
+// SBZ
 }
 
 
@@ -27,5 +38,11 @@ void FPrefabricatorRuntime::ShutdownModule()
 {
 	// Clear the service object
 	FPrefabricatorService::Set(nullptr);
+// SBZ stephane.maruejouls - remove prefab at runtime
+#if WITH_EDITOR
+	FEditorDelegates::PreSaveWorld.Remove(PreSaveHandle);
+#endif
+// SBZ
+
 }
 

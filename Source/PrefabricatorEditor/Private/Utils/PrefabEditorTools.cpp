@@ -2,13 +2,20 @@
 
 #include "Utils/PrefabEditorTools.h"
 
+#include "Asset/PrefabricatorAsset.h"		   // SBZ stephane.maruejouls - save to disk
 #include "Prefab/PrefabActor.h"
-#include "Prefab/PrefabActor.h"
+#include "Prefab/PrefabTools.h"				   // SBZ stephane.maruejouls - save to disk
 #include "Prefab/PrefabComponent.h"
 
 #include "EditorViewportClient.h"
 #include "EngineUtils.h"
+#include "FileHelpers.h"					   // SBZ stephane.maruejouls - save to disk
 #include "Framework/Notifications/NotificationManager.h"
+#include "ScopedSlowTask.h"					   // SBZ stephane.maruejouls - save to disk
+
+// SBZ stephane.maruejouls - save to disk
+#define LOCTEXT_NAMESPACE "PrefabActorCustomization" 
+// SBZ
 
 void FPrefabEditorTools::ReloadPrefabsInLevel(UWorld* World, UPrefabricatorAsset* InAsset)
 {
@@ -59,3 +66,31 @@ void FPrefabEditorTools::SwitchLevelViewportToRealtimeMode()
 	}
 }
 
+// SBZ stephane.maruejouls - save to disk
+void FPrefabEditorTools::CreatePrefab()
+{
+	TArray<UPackage*> PackagesToSave;
+	FPrefabTools::CreatePrefab();
+
+	TArray<AActor*> SelectedActors;
+	FPrefabTools::GetSelectedActors(SelectedActors);
+	FScopedSlowTask SlowTask(SelectedActors.Num(), LOCTEXT("FPrefabEditorTools_CreatePrefab", "Creating Prefab"));
+	SlowTask.MakeDialog(false);
+	for (AActor* Actor : SelectedActors)
+	{
+		if (APrefabActor* PrefabActor = Cast<APrefabActor>(Actor))
+		{
+			SlowTask.EnterProgressFrame(1.f);
+			UPrefabricatorAsset* PrefabAsset = Cast<UPrefabricatorAsset>(PrefabActor->PrefabComponent->PrefabAssetInterface.LoadSynchronous());
+			if (PrefabAsset)
+			{
+				PackagesToSave.Add(PrefabAsset->GetOutermost());
+			}
+		}		
+	}
+	if (PackagesToSave.Num() > 0)
+	{
+		FEditorFileUtils::PromptForCheckoutAndSave(PackagesToSave, /*bCheckDirtyOnAssetSave*/true, /*bPromptToSave=*/ false);
+	}
+}
+// SBZ

@@ -36,8 +36,9 @@ public:
 	virtual FVector SnapToGrid(const FVector& InLocation) { return InLocation; }
 	virtual void SetDetailsViewObject(UObject* InObject) {}
 	virtual AActor* SpawnActor(TSubclassOf<AActor> InClass, const FTransform& InTransform, ULevel* InLevel);
-	virtual void BeginTransaction(const FText& Description) {}
+	virtual void BeginTransaction(const FText& Description, const bool bShouldActuallyTransact = true) {} // SBZ stephane.maruejouls - undo revamp
 	virtual void EndTransaction() {}
+	virtual void CancelTransaction() {}	// SBZ stephane.maruejouls - undo revamp
 };
 
 class PREFABRICATORRUNTIME_API FPrefabricatorRuntimeService : public IPrefabricatorService {
@@ -49,3 +50,32 @@ public:
 	virtual UPrefabricatorAsset* CreatePrefabAsset() override;
 };
 
+// SBZ stephane.maruejouls - undo revamp
+class FPrefabricatorScopedTransaction
+{
+public:
+	FPrefabricatorScopedTransaction(const FText& Description, const bool bShouldActuallyTransact = true) : Service(FPrefabricatorService::Get())
+	{ 
+		if (Service.IsValid())
+		{
+			Service->BeginTransaction(Description, bShouldActuallyTransact);
+		}
+	}
+	~FPrefabricatorScopedTransaction()
+	{
+		if (Service.IsValid())
+		{
+			Service->EndTransaction();
+		}
+	}
+	void Cancel()
+	{
+		if (Service.IsValid())
+		{
+			Service->CancelTransaction();
+		}
+	}
+private:
+	TSharedPtr<IPrefabricatorService> Service;
+};
+// SBZ
