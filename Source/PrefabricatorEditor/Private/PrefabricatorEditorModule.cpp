@@ -74,7 +74,7 @@ class FPrefabricatorEditorModule : public IPrefabricatorEditorModule
 	virtual void ShutdownModule() override {
 
 		// Unregister the prefabricator asset broker
-		if (PrefabAssetBroker.IsValid()) {
+		if (UObjectInitialized() && PrefabAssetBroker.IsValid()) { // SBZ romaric.sourbe - ensure UObject subsystem is still valid
 			FComponentAssetBrokerage::UnregisterBroker(PrefabAssetBroker);
 			PrefabAssetBroker = nullptr;
 		}

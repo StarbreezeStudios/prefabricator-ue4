@@ -6,10 +6,14 @@
 #include "Prefab/PrefabActor.h"
 #include "Prefab/PrefabComponent.h"
 #include "Prefab/PrefabTools.h"
+#include "Utils/PrefabricatorEditorService.h" // SBZ stephane.maruejouls - undo revamp
 
 #include "AssetData.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogPrefabricatorActorFactory, Log, All);
+// SBZ stephane.maruejouls - undo revamp
+#define LOCTEXT_NAMESPACE "PrefabricatorEditorModule" 
+// SBZ
 
 UPrefabricatorActorFactory::UPrefabricatorActorFactory(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer) 
@@ -59,8 +63,15 @@ void UPrefabricatorActorFactory::PostSpawnActor(UObject* Asset, AActor* NewActor
 
 	if (PrefabActor && PrefabActor->PrefabComponent) {
 		PrefabActor->PrefabComponent->PrefabAssetInterface = Cast<UPrefabricatorAssetInterface>(Asset);
-		
+
+		// SBZ stephane.maruejouls - undo revamp
+		FPrefabricatorScopedTransaction UndoTransaction(LOCTEXT("PrefabPostSpawn", "PostSpawn"), (NewActor->GetFlags() & RF_Transient) == RF_Transient);
 		LoadPrefabActorState(PrefabActor);
+		if ((NewActor->GetFlags() & RF_Transient) == RF_Transient)
+		{
+			UndoTransaction.Cancel();
+		}
+		// SBZ
 	}
 
 }
@@ -87,3 +98,6 @@ bool UPrefabricatorActorFactory::CanCreateActorFrom(const FAssetData& AssetData,
 	}
 }
 
+// SBZ stephane.maruejouls - undo revamp
+#undef LOCTEXT_NAMESPACE 
+// SBZ

@@ -19,6 +19,20 @@ public:
 	static FReply RandomizePrefabCollection(IDetailLayoutBuilder* DetailBuilder);
 	static FReply UnlinkPrefab(IDetailLayoutBuilder* DetailBuilder, bool bRecursive);
 	static FReply UpdateThumbFromViewport(IDetailLayoutBuilder* DetailBuilder);
+
+	// SBZ stephane.maruejouls - Instancing
+	static FReply MakeInstances(IDetailLayoutBuilder* DetailBuilder, bool bHierarchical);
+	static FReply MakeStaticMeshes(IDetailLayoutBuilder* DetailBuilder);
+	// SBZ
+	// SBZ stephane.maruejouls - Merge Meshes
+	bool ContainsOnlyStatics(IDetailLayoutBuilder* DetailBuilder, bool bOnlyStatics) const;
+	bool ContainsInstances(IDetailLayoutBuilder* DetailBuilder) const;
+	static FReply MergeMeshes(IDetailLayoutBuilder* DetailBuilder);
+	// SBZ
+	// SBZ stephane.maruejouls - Update merged from prefab
+	bool ContainsMerged(IDetailLayoutBuilder* DetailBuilder) const;
+	static FReply UpdateMergedPrefabs(IDetailLayoutBuilder* DetailBuilder);
+	// SBZ
 };
 
 class PREFABRICATOREDITOR_API FPrefabRandomizerCustomization : public IDetailCustomization {

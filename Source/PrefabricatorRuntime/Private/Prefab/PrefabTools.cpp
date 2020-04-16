@@ -100,6 +100,7 @@ bool FPrefabTools::CanCreatePrefab()
 
 void FPrefabTools::CreatePrefab()
 {
+	FPrefabricatorScopedTransaction UndoTransaction(LOCTEXT("TransLabel_MakeStatic", "Create Prefab"));	// SBZ stephane.maruejouls - undo revamp
 	TArray<AActor*> SelectedActors;
 	GetSelectedActors(SelectedActors);
 
@@ -476,10 +477,6 @@ void FPrefabTools::LoadStateFromPrefabAsset(AActor* InActor, const FPrefabricato
 		return;
 	}
 
-	TSharedPtr<IPrefabricatorService> Service = FPrefabricatorService::Get();
-	if (Service.IsValid()) {
-		Service->BeginTransaction(LOCTEXT("TransLabel_LoadPrefab", "Load Prefab"));
-	}
 
 	DeserializeFields(InActor, InActorData.Properties);
 
@@ -511,19 +508,10 @@ void FPrefabTools::LoadStateFromPrefabAsset(AActor* InActor, const FPrefabricato
 	}
 #endif // WITH_EDITOR
 
-	if (Service.IsValid()) {
-		Service->EndTransaction();
-	}
-
 }
 
 void FPrefabTools::UnlinkAndDestroyPrefabActor(APrefabActor* PrefabActor, const FString& FolderPath, bool bRecursive)
 {
-	TSharedPtr<IPrefabricatorService> Service = FPrefabricatorService::Get();
-	if (Service.IsValid()) {
-		Service->BeginTransaction(LOCTEXT("TransLabel_CreatePrefab", "Unlink Prefab"));
-	}
-
 	// Grab all the actors directly attached to this prefab actor
 	TArray<AActor*> ChildActors;
 	PrefabActor->GetAttachedActors(ChildActors);
@@ -550,11 +538,6 @@ void FPrefabTools::UnlinkAndDestroyPrefabActor(APrefabActor* PrefabActor, const 
 
 	// Finally delete the prefab actor
 	PrefabActor->Destroy();
-
-	if (Service.IsValid()) {
-		Service->EndTransaction();
-	}
-
 }
 
 void FPrefabTools::GetActorChildren(AActor* InParent, TArray<AActor*>& OutChildren)
@@ -738,5 +721,43 @@ void FPrefabVersionControl::UpgradeFromVersion_AddedSoftReferences(UPrefabricato
 	// Handle future version upgrade here to move to next version
 }
 
+// SBZ stephane.maruejouls - remove prefab at runtime
+#if WITH_EDITOR
+void FPrefabTools::CleanupBeforeSave(uint32 SaveFlags, UWorld* World)
+{
+	if (IsRunningCommandlet())
+	{
+		UE_LOG(LogPrefabTools, Verbose, TEXT("-------------------------------"));
+		UE_LOG(LogPrefabTools, Verbose, TEXT("cleaning prefabs in %s"), *World->GetName());
+		for (TActorIterator<AActor> It(World, AActor::StaticClass(), EActorIteratorFlags::AllActors); It; ++It)
+		{
+			AActor* Actor = *It;			
+			if (Actor && Actor->GetRootComponent())
+			{
+				if (UPrefabricatorAssetUserData* UserData = Actor->GetRootComponent()->GetAssetUserData<UPrefabricatorAssetUserData>())
+				{
+					CleanupForCooking(Actor, UserData->PrefabActor.Get());
+				}
+				else if(APrefabActor* PrefabActor = Cast<APrefabActor>(Actor->GetAttachParentActor()))
+				{
+					CleanupForCooking(Actor, PrefabActor);
+				}
+			}
+		}
+	}
+}
+
+void FPrefabTools::CleanupForCooking(AActor* Actor, APrefabActor* PrefabActor)
+{
+	if (PrefabActor && Actor )
+	{
+		UE_LOG(LogPrefabTools, Verbose, TEXT("- %s from %s at %s"), *Actor->GetName(), *PrefabActor->GetName(), *Actor->ActorToWorld().GetLocation().ToCompactString());
+		Actor->DetachFromActor(FDetachmentTransformRules(EDetachmentRule::KeepWorld, true));
+		Actor->GetRootComponent()->RemoveUserDataOfClass(UPrefabricatorAssetUserData::StaticClass());
+		UE_LOG(LogPrefabTools, Verbose, TEXT("+ %s from %s at %s"), *Actor->GetName(), *PrefabActor->GetName(), *Actor->ActorToWorld().GetLocation().ToCompactString());
+	}
+}
+#endif
+// SBZ
 #undef LOCTEXT_NAMESPACE
 

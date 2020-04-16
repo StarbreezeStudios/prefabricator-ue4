@@ -37,6 +37,16 @@ namespace UnrealBuildTool.Rules
 					// ... add any modules that your module loads dynamically here ...
 				}
 				);
+			// SBZ stephane.maruejouls - remove prefab at runtime
+            if (Target.Type == UnrealBuildTool.TargetType.Editor)
+            {
+                PublicDependencyModuleNames.AddRange(
+                    new string[] {
+                    "UnrealEd"
+                    }
+                );
+            }
+			// SBZ
 		}
 	}
 }

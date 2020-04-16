@@ -20,9 +20,11 @@ public:
 	virtual void PostActorCreated() override;
 
 #if WITH_EDITOR
+	virtual void BeginPlay() override; // SBZ stephane.maruejouls - Remove PrefabActor
 	virtual void PostEditChangeProperty(struct FPropertyChangedEvent& e) override;
 	virtual void PostDuplicate(EDuplicateMode::Type DuplicateMode) override;
 	virtual FName GetCustomIconName() const override;
+	virtual bool GetReferencedContentObjects(TArray<UObject*>& Objects) const override;	// SBZ stephane.maruejouls - Reports prefab assets
 #endif // WITH_EDITOR
 	/// End of AActor Interface 
 
