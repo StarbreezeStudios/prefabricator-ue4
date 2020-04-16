@@ -17,10 +17,24 @@ class PREFABRICATORRUNTIME_API APrefabInstancingActor : public AActor {
 public:
 	virtual void OnConstruction(const FTransform& Transform) override;
 
-	void Cleanup(bool DestroySelf);
+	void Cleanup(int32 MinimalNumberOfInstances);
 
 	void AddReferenceToActor(AStaticMeshActor* ReferencedActor);
-public:
+
+	void SetupInstances(bool IsHierarchial, UStaticMesh* StaticMesh, EComponentMobility::Type Mobility);
+	void SetMaterial(int32 ElementIndex, UMaterialInterface* Material);
+	void AddInstance(const FTransform& InstanceTransform);
+
+	bool IsHierarchical() const { return bISM; }
+
+	UInstancedStaticMeshComponent* GetInstancedStaticMeshComponent();
+	UInstancedStaticMeshComponent* GetInstancedStaticMeshComponent() const;
+
+	UStaticMesh* GetStaticMesh() const;
+	TArray<UMaterialInterface*> GetMaterials() const;
+
+	virtual void PostInitializeComponents() override;
+protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	UInstancedStaticMeshComponent* InstancedStaticMesh = nullptr;
 

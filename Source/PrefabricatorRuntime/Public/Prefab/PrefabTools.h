@@ -43,6 +43,13 @@ public:
 	static int32 GetRandomSeed(const FRandomStream& Random);
 
 	static void IterateChildrenRecursive(APrefabActor* Actor, TFunction<void(AActor*)> Visit);
+
+// SBZ stephane.maruejouls - remove prefab at runtime
+#if WITH_EDITOR
+	static void CleanupBeforeSave(uint32 SaveFlags, UWorld* World);
+	static void CleanupForCooking(AActor* Actor, APrefabActor* PrefabActor);
+#endif
+// SBZ
 };
 
 class PREFABRICATORRUNTIME_API FPrefabVersionControl {

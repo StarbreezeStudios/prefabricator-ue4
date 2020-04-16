@@ -55,6 +55,7 @@ namespace UnrealBuildTool.Rules
 				    "ContentBrowser",
                     "Projects",
                     "PrefabricatorRuntime",
+					"MeshMergeUtilities"	// SBZ stephane.maruejouls - merging actors
 					// ... add private dependencies that you statically link with here ...
 				}
 				);

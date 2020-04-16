@@ -122,26 +122,45 @@ namespace {
 		PrefabStaticTransaction() = NULL;
 	}
 
+	// SBZ stephane.maruejouls - undo revamp
+	static void PrefabCancelTransaction()
+	{
+		if (PrefabStaticTransaction())
+		{
+			PrefabStaticTransaction()->Cancel();
+		}
+	}
+	// SBZ
+
 	/**
 	 * Begins a new transaction, if no outstanding transaction exists.
 	 */
-	static void PrefabBeginTransaction(const FText& Description)
+	 // SBZ stephane.maruejouls - undo revamp
+	static void PrefabBeginTransaction(const FText& Description, const bool bShouldActuallyTransact)
 	{
 		if (!PrefabStaticTransaction())
 		{
-			PrefabStaticTransaction() = new FScopedTransaction(Description);
+			PrefabStaticTransaction() = new FScopedTransaction(Description, bShouldActuallyTransact);
 		}
 	}
+	// SBZ
 } // namespace
 
-
-void FPrefabricatorEditorService::BeginTransaction(const FText& Description)
+// SBZ stephane.maruejouls - undo revamp
+void FPrefabricatorEditorService::BeginTransaction(const FText& Description, const bool bShouldActuallyTransact)
 {
-	PrefabBeginTransaction(Description);
+	PrefabBeginTransaction(Description, bShouldActuallyTransact);
 }
+// SBZ
 
 void FPrefabricatorEditorService::EndTransaction()
 {
 	PrefabEndTransaction();
 }
 
+// SBZ stephane.maruejouls - undo revamp
+void FPrefabricatorEditorService::CancelTransaction()
+{
+	PrefabCancelTransaction();
+}
+// SBZ

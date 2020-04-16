@@ -4,9 +4,12 @@
 
 #include "Asset/PrefabricatorAsset.h"
 #include "Asset/Thumbnail/PrefabricatorAssetThumbnailScene.h"
+#include "Utils/PrefabricatorService.h"
 
 #include "RenderingThread.h"
 #include "SceneView.h"
+
+#define LOCTEXT_NAMESPACE "PrefabricatorEditorModule" 
 
 DEFINE_LOG_CATEGORY_STATIC(LogPrefabAssetThumbRenderer, Log, All);
 
@@ -21,6 +24,12 @@ void UPrefabricatorAssetThumbnailRenderer::Draw(UObject* Object, int32 X, int32 
 	UPrefabricatorAsset* PrefabAsset = Cast<UPrefabricatorAsset>(Object);
 	if (PrefabAsset && !PrefabAsset->IsPendingKill()) {
 		FPrefabricatorAssetThumbnailScene* ThumbnailScene = GetThumbnailScene(*PrefabAsset->GetPathName());
+
+		TSharedPtr<IPrefabricatorService> Service = FPrefabricatorService::Get();
+		if (Service.IsValid()) {
+			Service->BeginTransaction(LOCTEXT("Prefabricator_Render_Thumbnail", "Render Thumbnail"));
+		}
+
 		ThumbnailScene->SetPrefabAsset(PrefabAsset);
 		ThumbnailScene->GetScene()->UpdateSpeedTreeWind(0.0);
 
@@ -34,6 +43,10 @@ void UPrefabricatorAssetThumbnailRenderer::Draw(UObject* Object, int32 X, int32 
 		ThumbnailScene->GetView(&ViewFamily, X, Y, Width, Height);
 		RenderViewFamily(Canvas, &ViewFamily);
 		
+		if (Service.IsValid()) {
+			Service->CancelTransaction();
+			Service->EndTransaction();
+		}
 	}
 }
 

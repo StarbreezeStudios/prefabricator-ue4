@@ -4,6 +4,7 @@
 
 #include "Prefab/PrefabTools.h"
 #include "PrefabEditorStyle.h"
+#include "Utils/PrefabEditorTools.h" // SBZ stephane.maruejouls - merging actors
 
 #include "Framework/Commands/Commands.h"
 #include "Framework/Commands/UIAction.h"
@@ -27,7 +28,7 @@ void FPrefabricatorCommands::RegisterCommands() {
 
 	LevelMenuActionList->MapAction(
 		CreatePrefab,
-		FExecuteAction::CreateStatic(&FPrefabTools::CreatePrefab),
+		FExecuteAction::CreateStatic(&FPrefabEditorTools::CreatePrefab),	// SBZ stephane.maruejouls - save to disk
 		FCanExecuteAction::CreateStatic(&FPrefabTools::CanCreatePrefab)
 	);
 }
