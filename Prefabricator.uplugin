@@ -1,8 +1,8 @@
 {
 	"FileVersion" : 3,
 	"FriendlyName" : "Prefabricator",
-	"Version" : 17,
-	"VersionName" : "1.4.0",
+	"Version" : 19,
+	"VersionName" : "1.5.1",
 	"CreatedBy" : "Code Respawn",
 	"CreatedByURL" : "http://prefabricator.io",
 	"DocsURL": "http://docs.prefabricator.io",
@@ -56,12 +56,29 @@
 		{
 			"Name" : "ConstructionSystemRuntime",
 			"Type" : "Runtime",
-			"LoadingPhase" : "PreDefault"
+			"LoadingPhase" : "PreDefault",
+			"WhitelistPlatforms": [
+				"Win32",
+				"Win64",
+				"Mac",
+				"Android",
+				"IOS",
+				"PS4",
+				"XBoxOne",
+				"Linux"
+			]
 		},
 		{
 			"Name" : "ConstructionSystemEditor",
 			"Type" : "Editor",
-			"LoadingPhase" : "Default"
+			"LoadingPhase" : "Default",
+			"WhitelistPlatforms" : [
+				"Win32", 
+				"Win64", 
+				"Mac", 
+				"Android", 
+				"IOS"
+			]
 		}
 	],
 

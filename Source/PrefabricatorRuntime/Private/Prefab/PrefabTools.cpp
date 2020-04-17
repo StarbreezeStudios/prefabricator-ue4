@@ -573,7 +573,11 @@ void FPrefabTools::LoadActorState(AActor* InActor, const FPrefabricatorActorData
 		return;
 	}
 
-
+	TSharedPtr<IPrefabricatorService> Service = FPrefabricatorService::Get();
+	if (Service.IsValid()) {
+		SCOPE_CYCLE_COUNTER(STAT_LoadActorState_BeginTransaction);
+		//Service->BeginTransaction(LOCTEXT("TransLabel_LoadPrefab", "Load Prefab"));
+	}
 
 	{
 		SCOPE_CYCLE_COUNTER(STAT_LoadActorState_DeserializeFieldsActor);
@@ -638,6 +642,11 @@ void FPrefabTools::LoadActorState(AActor* InActor, const FPrefabricatorActorData
 
 	InActor->PostLoad();
 	InActor->ReregisterAllComponents();
+
+	if (Service.IsValid()) {
+		SCOPE_CYCLE_COUNTER(STAT_LoadActorState_EndTransaction);
+		//Service->EndTransaction();
+	}
 }
 
 void FPrefabTools::UnlinkAndDestroyPrefabActor(APrefabActor* PrefabActor, const FString& FolderPath, bool bRecursive)
@@ -771,21 +780,26 @@ void FPrefabTools::LoadStateFromPrefabAsset(APrefabActor* PrefabActor, const FPr
 
 			// Try to re-use an existing actor from this prefab
 			AActor* ChildActor = nullptr;
-			if (AActor** SearchResult = ActorByItemID.Find(ActorItemData.PrefabItemID)) {
-				ChildActor = *SearchResult;
-				if (ChildActor) {
-					FString ExistingClassName = ChildActor->GetClass()->GetPathName();
-					FString RequiredClassName = ActorItemData.ClassPathRef.GetAssetPathString();
-					if (ExistingClassName == RequiredClassName) {
-						// We can reuse this actor
-						ExistingActorPool.Remove(ChildActor);
-						ActorByItemID.Remove(ActorItemData.PrefabItemID);
-					}
-					else {
-						ChildActor = nullptr;
+			bool bPrefabOutOfDate = PrefabActor->LastUpdateID != PrefabAsset->LastUpdateID;
+			if (!bPrefabOutOfDate) {
+				// The prefab is not out of date. try to reuse an existing actor item
+				if (AActor** SearchResult = ActorByItemID.Find(ActorItemData.PrefabItemID)) {
+					ChildActor = *SearchResult;
+					if (ChildActor) {
+						FString ExistingClassName = ChildActor->GetClass()->GetPathName();
+						FString RequiredClassName = ActorItemData.ClassPathRef.GetAssetPathString();
+						if (ExistingClassName == RequiredClassName) {
+							// We can reuse this actor
+							ExistingActorPool.Remove(ChildActor);
+							ActorByItemID.Remove(ActorItemData.PrefabItemID);
+						}
+						else {
+							ChildActor = nullptr;
+						}
 					}
 				}
 			}
+
 
 			FTransform WorldTransform = ActorItemData.RelativeTransform * PrefabActor->GetTransform();
 			if (!ChildActor) {
@@ -798,14 +812,15 @@ void FPrefabTools::LoadStateFromPrefabAsset(APrefabActor* PrefabActor, const FPr
 				ChildActor = Service->SpawnActor(ActorClass, WorldTransform, PrefabActor->GetLevel(), Template);
 
 				ParentActors(PrefabActor, ChildActor);
-				if (Template == nullptr) {
+
+				if (Template == nullptr || bPrefabOutOfDate) {
 					// We couldn't use a template,  so load the prefab properties in
 					LoadActorState(ChildActor, ActorItemData, InSettings);
-				}
 
-				// Save this as a template for future reuse
-				if (LoadState && !Template && InSettings.bCanSaveToCachedTemplate) {
-					LoadState->RegisterTemplate(ActorItemData.PrefabItemID, PrefabAsset->LastUpdateID, ChildActor);
+					// Save this as a template for future reuse
+					if (LoadState && InSettings.bCanSaveToCachedTemplate) {
+						LoadState->RegisterTemplate(ActorItemData.PrefabItemID, PrefabAsset->LastUpdateID, ChildActor);
+					}
 				}
 			}
 			else {
