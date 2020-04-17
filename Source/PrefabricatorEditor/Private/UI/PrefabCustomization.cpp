@@ -1,4 +1,4 @@
-//$ Copyright 2015-19, Code Respawn Technologies Pvt Ltd - All Rights Reserved $//
+//$ Copyright 2015-20, Code Respawn Technologies Pvt Ltd - All Rights Reserved $//
 
 #include "UI/PrefabCustomization.h"
 
@@ -11,6 +11,7 @@
 #include "Prefab/Random/PrefabRandomizerActor.h"
 #include "PrefabricatorEditorModule.h"
 #include "PrefabricatorSettings.h"
+#include "Utils/Debug/PrefabDebugActor.h"
 #include "Utils/PrefabEditorTools.h"
 #include "Utils/PrefabricatorService.h" // SBZ stephane.maruejouls - undo revamp
 
@@ -266,21 +267,6 @@ void FPrefabActorCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 				.OnClicked(FOnClicked::CreateStatic(&FPrefabActorCustomization::UnlinkPrefab, &DetailBuilder, true))
 			]
 		];
-	}
-
-
-	const UPrefabricatorSettings* PS = GetDefault<UPrefabricatorSettings>();
-	if (!PS->bShowAssetThumbnails)
-	{
-		// Add an option to save the viewport image as a thumbnail for the asset
-		IDetailCategoryBuilder& Category = DetailBuilder.EditCategory("Prefab Collection Actions", FText::GetEmpty(), ECategoryPriority::Important);
-		Category.AddCustomRow(LOCTEXT("PrefabThumb_Filter", "thumbnail thumb"))
-			.WholeRowContent()
-			[
-				SNew(SButton)
-				.Text(LOCTEXT("PrefabThumbCommand_SaveThumbnail", "Update Thumbnail"))
-			.OnClicked(FOnClicked::CreateStatic(&FPrefabActorCustomization::UpdateThumbFromViewport, &DetailBuilder))
-			];
 	}
 }
 
@@ -999,6 +985,58 @@ FReply FPrefabRandomizerCustomization::HandleRandomize(IDetailLayoutBuilder* Det
 			}
 
 			PrefabRandomizer->Randomize(FMath::Rand());
+		}
+	}
+
+	return FReply::Handled();
+}
+
+///////////////////////////////// FPrefabRandomizerCustomization /////////////////////////////////
+
+void FPrefabDebugCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBuilder)
+{
+	IDetailCategoryBuilder& Category = DetailBuilder.EditCategory("Prefab Debug", FText::GetEmpty(), ECategoryPriority::Important);
+	Category.AddCustomRow(LOCTEXT("PrefabDebugCommand_SaveFilter", "save debug prefab"))
+		.WholeRowContent()
+		[
+			SNew(SButton)
+			.Text(LOCTEXT("PrefabDebugCommand_Save", "Save Actor Data"))
+			.OnClicked(FOnClicked::CreateStatic(&FPrefabDebugCustomization::SaveDebugData, &DetailBuilder))
+		];
+
+	Category.AddCustomRow(LOCTEXT("PrefabDebugCommand_LoadFilter", "load debug prefab"))
+		.WholeRowContent()
+		[
+			SNew(SButton)
+			.Text(LOCTEXT("PrefabDebugCommand_lOAD", "Load Actor Data"))
+			.OnClicked(FOnClicked::CreateStatic(&FPrefabDebugCustomization::LoadDebugData, &DetailBuilder))
+		];
+
+}
+
+TSharedRef<IDetailCustomization> FPrefabDebugCustomization::MakeInstance()
+{
+	return MakeShareable(new FPrefabDebugCustomization);
+}
+
+FReply FPrefabDebugCustomization::SaveDebugData(IDetailLayoutBuilder* DetailBuilder)
+{
+	TArray<APrefabDebugActor*> DebugActors = GetDetailObject<APrefabDebugActor>(DetailBuilder);
+	for (APrefabDebugActor* DebugActor : DebugActors) {
+		if (DebugActor) {
+			DebugActor->SaveActorData();
+		}
+	}
+
+	return FReply::Handled();
+}
+
+FReply FPrefabDebugCustomization::LoadDebugData(IDetailLayoutBuilder* DetailBuilder)
+{
+	TArray<APrefabDebugActor*> DebugActors = GetDetailObject<APrefabDebugActor>(DetailBuilder);
+	for (APrefabDebugActor* DebugActor : DebugActors) {
+		if (DebugActor) {
+			DebugActor->LoadActorData();
 		}
 	}
 

@@ -1,7 +1,8 @@
-//$ Copyright 2015-19, Code Respawn Technologies Pvt Ltd - All Rights Reserved $//
+//$ Copyright 2015-20, Code Respawn Technologies Pvt Ltd - All Rights Reserved $//
 
 #include "PrefabricatorRuntimeModule.h"
 
+#include "Prefab/PrefabTools.h"
 #include "Utils/PrefabricatorService.h"
 #include "Prefab/PrefabTools.h"	// SBZ stephane.maruejouls - remove prefab at runtime
 
@@ -31,6 +32,8 @@ void FPrefabricatorRuntime::StartupModule()
 	PreSaveHandle = FEditorDelegates::PreSaveWorld.AddStatic(FPrefabTools::CleanupBeforeSave);
 #endif
 // SBZ
+
+	FGlobalPrefabInstanceTemplates::_CreateSingleton();
 }
 
 
@@ -38,6 +41,8 @@ void FPrefabricatorRuntime::ShutdownModule()
 {
 	// Clear the service object
 	FPrefabricatorService::Set(nullptr);
+
+	FGlobalPrefabInstanceTemplates::_ReleaseSingleton();
 // SBZ stephane.maruejouls - remove prefab at runtime
 #if WITH_EDITOR
 	FEditorDelegates::PreSaveWorld.Remove(PreSaveHandle);
