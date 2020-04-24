@@ -25,6 +25,7 @@ public:
 
 	static void CreatePrefab(); // SBZ stephane.maruejouls - save to disk
 
+
 	template<typename T>
 	static T* CreateAssetOnContentBrowser(const FString& InAssetName, bool bSyncBrowserToAsset)
 	{

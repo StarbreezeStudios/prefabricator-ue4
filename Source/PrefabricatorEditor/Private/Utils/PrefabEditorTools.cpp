@@ -249,4 +249,3 @@ void FPrefabEditorTools::CreatePrefab()
 	}
 }
 // SBZ
-

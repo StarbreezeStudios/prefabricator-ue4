@@ -180,6 +180,7 @@ FPrimitiveSceneProxy* UPrefabricatorConstructionSnapComponent::CreateSceneProxy(
 APrefabricatorConstructionSnap::APrefabricatorConstructionSnap(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer) 
 {
+	bCanBeDamaged = false;
 	bRelevantForLevelBounds = false;
 
 	ConstructionSnapComponent = CreateDefaultSubobject<UPrefabricatorConstructionSnapComponent>(TEXT("SnapComponent"));
