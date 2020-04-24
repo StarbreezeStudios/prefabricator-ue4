@@ -1,4 +1,4 @@
-//$ Copyright 2015-19, Code Respawn Technologies Pvt Ltd - All Rights Reserved $//
+//$ Copyright 2015-20, Code Respawn Technologies Pvt Ltd - All Rights Reserved $//
 
 #pragma once
 #include "CoreMinimal.h"
@@ -34,6 +34,12 @@ public:
 
 	UPROPERTY()
 	TArray<FPrefabricatorPropertyAssetMapping> AssetSoftReferenceMappings;
+
+	UPROPERTY()
+	bool bIsCrossReferencedActor = false;
+
+	UPROPERTY()
+	FGuid CrossReferencePrefabActorId;
 
 	void SaveReferencedAssetValues();
 	void LoadReferencedAssetValues();
@@ -112,6 +118,7 @@ public:
 enum class EPrefabricatorAssetVersion {
 	InitialVersion = 0,
 	AddedSoftReference,
+	AddedSoftReference_PrefabFix,
 
 	//----------- Versions should be placed above this line -----------------
 	LastVersionPlusOne,
@@ -171,6 +178,11 @@ class PREFABRICATORRUNTIME_API UPrefabricatorAssetCollection : public UPrefabric
 public:
 	UPROPERTY(EditAnywhere, Category = "Prefabricator")
 	TArray<FPrefabricatorAssetCollectionItem> Prefabs;
+
+#if WITH_EDITORONLY_DATA
+	UPROPERTY(EditAnywhere, Category = "Prefabricator")
+	TSoftObjectPtr<UTexture2D> CustomThumbnail;
+#endif // WITH_EDITORONLY_DATA
 
 	UPROPERTY()
 	uint32 Version;

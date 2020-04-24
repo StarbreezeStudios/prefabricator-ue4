@@ -1,4 +1,4 @@
-//$ Copyright 2015-19, Code Respawn Technologies Pvt Ltd - All Rights Reserved $//
+//$ Copyright 2015-20, Code Respawn Technologies Pvt Ltd - All Rights Reserved $//
 
 #include "UI/EditorUIExtender.h"
 
@@ -15,12 +15,14 @@
 #include "EditorModeManager.h"
 #include "Engine/Selection.h"
 #include "EngineUtils.h"
+#include "FileHelpers.h"
 #include "Framework/Commands/UICommandList.h"
 #include "Framework/MultiBox/MultiBoxBuilder.h"
 #include "Framework/MultiBox/MultiBoxExtender.h"
 #include "Framework/Notifications/NotificationManager.h"
 #include "Framework/SlateDelegates.h"
 #include "LevelEditor.h"
+#include "Misc/MessageDialog.h"
 #include "Widgets/Notifications/SNotificationList.h"
 #include "Widgets/SNullWidget.h"
 
@@ -32,6 +34,9 @@ namespace PrefabURLs {
 	static const FString URL_Website	= "https://prefabricator.io";
 	static const FString URL_Discord	= "https://discord.gg/dRewTSU";
 	static const FString URL_DevForum	= "https://forums.unrealengine.com/search?q=prefabricator&searchJSON=%7B%22keywords%22%3A%22prefabricator%22%7D";
+
+	static const FString PATH_SAMPLE_PLATFORMER = "/Prefabricator/Samples/PF_GamePlatformer/Maps/PFGame_Platformer";
+	static const FString PATH_SAMPLE_CONSTRUCTION = "/Prefabricator/Samples/PF_Construction/Maps/PFConstructionDemo";
 }
 
 void FEditorUIExtender::Extend()
@@ -119,6 +124,27 @@ void FEditorUIExtender::Extend()
 			IPrefabricatorEditorModule::Get().UpgradePrefabAssets();
 		}
 
+		static void ShowSampleUnsupportedMessage(FString InMinEngineVersion) {
+			FText Message = FText::FromString("Sample requires engine version " + InMinEngineVersion + " or higher");
+			FText Title = FText::FromString("Engine " + InMinEngineVersion + "+ required");
+			FMessageDialog::Open(EAppMsgType::Ok, EAppReturnType::Ok, Message, &Title);
+		}
+
+		static void OpenSample(FString InPath) {
+			// If there are any unsaved changes to the current level, see if the user wants to save those first.
+			bool bPromptUserToSave = true;
+			bool bSaveMapPackages = true;
+			bool bSaveContentPackages = true;
+			if (FEditorFileUtils::SaveDirtyPackages(bPromptUserToSave, bSaveMapPackages, bSaveContentPackages)) {
+				if (FPackageName::IsValidLongPackageName(*InPath)) {
+					const FString FileToOpen = FPackageName::LongPackageNameToFilename(*InPath, FPackageName::GetMapPackageExtension());
+					const bool bLoadAsTemplate = false;
+					const bool bShowProgress = true;
+					FEditorFileUtils::LoadMap(FileToOpen, bLoadAsTemplate, bShowProgress);
+				}
+			}
+		}
+
 		static void HandleShowToolbarPrefabSubMenu_Community(FMenuBuilder& MenuBuilder) {
 			MenuBuilder.AddMenuEntry(
 				LOCTEXT("CommunityForumLabel", "Development Forum"),
@@ -143,6 +169,22 @@ void FEditorUIExtender::Extend()
 				FUIAction(FExecuteAction::CreateStatic(&Local::UpgradeAssets))
 			);
 
+		}
+
+		static void HandleShowToolbarPrefabSubMenu_OpenSamples(FMenuBuilder& MenuBuilder) {
+			MenuBuilder.AddMenuEntry(
+				LOCTEXT("SamplePlatformerLabel", "Platformer Game Demo"),
+				LOCTEXT("SamplePlatformerTooltip", "Demostrates how to build a procedural platformer level with thousands of layout variations"),
+				FSlateIcon(FPrefabEditorStyle::Get().GetStyleSetName(), "ClassIcon.Unreal"),
+				FUIAction(FExecuteAction::CreateStatic(&Local::ShowSampleUnsupportedMessage, FString("4.24")))
+			);
+
+			MenuBuilder.AddMenuEntry(
+				LOCTEXT("SampleConstructionLabel", "Construction System Demo"),
+				LOCTEXT("SampleConstructionTooltip", "Allow your players to build their own worlds using the Construction System"),
+				FSlateIcon(FPrefabEditorStyle::Get().GetStyleSetName(), "ClassIcon.Unreal"),
+				FUIAction(FExecuteAction::CreateStatic(&Local::ShowSampleUnsupportedMessage, FString("4.24")))
+			);
 		}
 
 		static TSharedRef<SWidget> HandleShowToolbarPrefabMenu() {
@@ -181,6 +223,14 @@ void FEditorUIExtender::Extend()
 				LOCTEXT("MenuAdvanced", "Advanced"),
 				LOCTEXT("MenuAdvancedTooltip", "Advanced options"),
 				FNewMenuDelegate::CreateStatic(&Local::HandleShowToolbarPrefabSubMenu_Advanced)
+			);
+			MenuBuilder.EndSection();
+
+			MenuBuilder.BeginSection("Prefabricator-Samples", LOCTEXT("SamplesHeader", "Samples"));
+			MenuBuilder.AddSubMenu(
+				LOCTEXT("MenuOpenSamples", "Open Sample"),
+				LOCTEXT("MenuOpenSamplesTooltip", "Open a sample map"),
+				FNewMenuDelegate::CreateStatic(&Local::HandleShowToolbarPrefabSubMenu_OpenSamples)
 			);
 			MenuBuilder.EndSection();
 
