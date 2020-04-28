@@ -89,38 +89,46 @@ UPrefabricatorAsset* UPrefabricatorAssetCollection::GetPrefabAsset(const FPrefab
 {
 	if (Prefabs.Num() == 0) return nullptr;
 
-	float TotalWeight = 0.0f;
-	for (const FPrefabricatorAssetCollectionItem& Item : Prefabs) {
-		TotalWeight += FMath::Max(0.0f, Item.Weight);
-	}
-
-	FRandomStream Random;
-	Random.Initialize(InConfig.Seed);
-
+	// SBZ stephane.maruejouls - PD3-480 - Collection dropdown
 	TSoftObjectPtr<UPrefabricatorAsset> PrefabAssetPtr;
-
-	if (TotalWeight == 0) {
-		// Return a random value from the list
-		int32 Index = Random.RandRange(0, Prefabs.Num() - 1);
+	if (InConfig.Seed < 0)
+	{
+		int32 Index = FMath::Min(-InConfig.Seed - 1, Prefabs.Num() - 1);
 		PrefabAssetPtr = Prefabs[Index].PrefabAsset;
 	}
-	else {
-		float SelectionValue = Random.FRandRange(0, TotalWeight);
-		float StartRange = 0.0f;
-		bool bFound = false;
+	else
+	{
+		float TotalWeight = 0.0f;
 		for (const FPrefabricatorAssetCollectionItem& Item : Prefabs) {
-			float EndRange = StartRange + Item.Weight;
-			if (SelectionValue >= StartRange && SelectionValue < EndRange) {
-				PrefabAssetPtr = Item.PrefabAsset;
-				bFound = true;
-				break;
-			}
-			StartRange = EndRange;
+			TotalWeight += FMath::Max(0.0f, Item.Weight);
 		}
-		if (!bFound) {
-			PrefabAssetPtr = Prefabs.Last().PrefabAsset;
+		FRandomStream Random;
+		Random.Initialize(InConfig.Seed);
+
+		if (TotalWeight == 0) {
+			// Return a random value from the list
+			int32 Index = Random.RandRange(0, Prefabs.Num() - 1);
+			PrefabAssetPtr = Prefabs[Index].PrefabAsset;
+		}
+		else {
+			float SelectionValue = Random.FRandRange(0, TotalWeight);
+			float StartRange = 0.0f;
+			bool bFound = false;
+			for (const FPrefabricatorAssetCollectionItem& Item : Prefabs) {
+				float EndRange = StartRange + Item.Weight;
+				if (SelectionValue >= StartRange && SelectionValue < EndRange) {
+					PrefabAssetPtr = Item.PrefabAsset;
+					bFound = true;
+					break;
+				}
+				StartRange = EndRange;
+			}
+			if (!bFound) {
+				PrefabAssetPtr = Prefabs.Last().PrefabAsset;
+			}
 		}
 	}
+	// SBZ
 	return PrefabAssetPtr.LoadSynchronous();
 }
 

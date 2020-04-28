@@ -71,18 +71,33 @@ void FPrefabActorCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 {
 	TArray<APrefabActor*> PrefabActors = GetDetailObject<APrefabActor>(&DetailBuilder);
 	TArray<UObject*> PrefabComponents;
+	// SBZ stephane.maruejouls - PD3-480 - Collection dropdown
+	UPrefabricatorAssetCollection* Collection = nullptr;
+	bool bIsSameAsset = true;
+	UPrefabricatorAssetInterface* CurrentAsset = nullptr;
+	// SBZ
 	bool bIsCollection = false;
 	for (APrefabActor* PrefabActor : PrefabActors) {
 		if (PrefabActor->PrefabComponent) {
 			PrefabComponents.Add(PrefabActor->PrefabComponent);
 
 			UPrefabricatorAssetInterface* Asset = PrefabActor->PrefabComponent->PrefabAssetInterface.LoadSynchronous();
+			// SBZ stephane.maruejouls - PD3-480 - Collection dropdown
+			if (!CurrentAsset)
+			{
+				CurrentAsset = Asset;
+			}
+			else if (CurrentAsset != Asset )
+			{
+				bIsSameAsset = false;
+			}
+			// SBZ
 			if (Asset && Asset->IsA<UPrefabricatorAssetCollection>()) {
+				Collection = Cast<UPrefabricatorAssetCollection>(Asset);	// SBZ stephane.maruejouls - PD3-480 - Collection dropdown
 				bIsCollection = true;
-				break;
+				//break;													// SBZ stephane.maruejouls - PD3-480 - Collection dropdown
 			}
 		}
-
 	}
 	FPrefabDetailsExtend& ExtenderDelegate = IPrefabricatorEditorModule::Get().GetPrefabActorDetailsExtender();
 
@@ -95,7 +110,7 @@ void FPrefabActorCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 
 	if (!bIsCollection) {
 		IDetailCategoryBuilder& Category = DetailBuilder.EditCategory("Prefab Asset Actions", FText::GetEmpty(), ECategoryPriority::Important);
-		Category.AddExternalObjectProperty(PrefabComponents, GET_MEMBER_NAME_CHECKED(UPrefabComponent, PrefabAssetInterface));
+		//Category.AddExternalObjectProperty(PrefabComponents, GET_MEMBER_NAME_CHECKED(UPrefabComponent, PrefabAssetInterface));	// SBZ stephane.maruejouls - PD3-480 - Collection dropdown
 
 		Category.AddCustomRow(LOCTEXT("PrefabCommand_Filter", "save load prefab asset"))
 		.WholeRowContent()
@@ -136,7 +151,7 @@ void FPrefabActorCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 			[
 				SNew(SButton)
 				.Text(LOCTEXT("PrefabCommand_RandomizeCollection", "Randomize"))
-				.OnClicked(FOnClicked::CreateStatic(&FPrefabActorCustomization::RandomizePrefabCollection, &DetailBuilder))
+				.OnClicked(this, &FPrefabActorCustomization::RandomizePrefabCollection, &DetailBuilder)	// SBZ stephane.maruejouls - PD3-480 - Collection dropdown
 			];
 
 
@@ -227,16 +242,124 @@ void FPrefabActorCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 	}
 	else {
 		IDetailCategoryBuilder& Category = DetailBuilder.EditCategory("Prefab Collection Actions", FText::GetEmpty(), ECategoryPriority::Important);
-		Category.AddExternalObjectProperty(PrefabComponents, GET_MEMBER_NAME_CHECKED(UPrefabComponent, PrefabAssetInterface));
+		// SBZ stephane.maruejouls - PD3-480 - Collection dropdown
+		//Category.AddExternalObjectProperty(PrefabComponents, GET_MEMBER_NAME_CHECKED(UPrefabComponent, PrefabAssetInterface));
 
-		Category.AddProperty(GET_MEMBER_NAME_CHECKED(APrefabActor, Seed));
+		if (PrefabComponents.Num() > 0 )
+		{
+			TSharedPtr< FAssetThumbnailPool > AssetThumbnailPool = DetailBuilder.GetThumbnailPool();
+			static TArray<UObject*> Prefabs;
+			Prefabs.Empty();
+			for (FPrefabricatorAssetCollectionItem& Item : Collection->Prefabs)
+			{
+				auto Asset = Item.PrefabAsset.Get();
+				//auto AssetPtr = MakeShareable(Asset);
+				Prefabs.Add(Asset);
+			}
 			
+			UpdateSelectedAsset(PrefabActors);
+			TSharedRef<SComboBox<UObject*>> ComboBox = SNew(SComboBox<UObject*>)
+				.OptionsSource(&Prefabs)
+				.IsEnabled(bIsSameAsset)
+				.InitiallySelectedItem(SelectedAssetPrefab)
+				.OnSelectionChanged_Lambda([this,PrefabActors](UObject* NewPrefab, ESelectInfo::Type SelectType)
+				{
+					int32 Index = -1;
+					if (Prefabs.Find(NewPrefab, Index))
+					{
+						SelectedAssetPrefab = Cast<UPrefabricatorAsset>(Prefabs[Index]);
+						CurrentPrefabThumbnail->SetAsset(SelectedAssetPrefab);
+						CurrentPrefabThumbnail->RefreshThumbnail();
+						for (APrefabActor* PrefabActor : PrefabActors)
+						{
+							if (PrefabActor) 
+							{
+								FRandomStream Random;
+								Random.Initialize(FMath::Rand());
+								PrefabActor->RandomizeSeed(Random);
+								PrefabActor->Seed = -(Index+1);
+								FPrefabLoadSettings LoadSettings;
+								LoadSettings.bRandomizeNestedSeed = true;
+								LoadSettings.Random = &Random;
+								FPrefabTools::LoadStateFromPrefabAsset(PrefabActor, LoadSettings);
+							}
+						}
+					}
+				})
+				.OnGenerateWidget_Lambda([AssetThumbnailPool](UObject* Object)
+				{
+					// Create thumbnail for prefabasset
+					UPrefabricatorAsset* Value = Cast<UPrefabricatorAsset>(Object);
+					TSharedPtr< FAssetThumbnail > PrefabThumbnail = MakeShareable(new FAssetThumbnail(Value, 64, 64, AssetThumbnailPool));
+					return SNew(SHorizontalBox)
+						+ SHorizontalBox::Slot()
+						.Padding(5.0f, 5.0f, 5.0f, 5.0f)
+						.AutoWidth()
+						[
+							SNew(SBox)
+							.WidthOverride(64)
+							.HeightOverride(64)
+							[
+								PrefabThumbnail->MakeThumbnailWidget()
+							]
+						]
+						+ SHorizontalBox::Slot()
+						.Padding(0.0f, 0.0f, 5.0f, 0.0f)
+						.FillWidth(1.0f)
+						.VAlign(VAlign_Center)
+						[
+							SNew(STextBlock).Text(FText::FromName(*Value->GetPathName()))
+						];
+					}
+				)
+				[
+					SNew(SHorizontalBox)
+					+ SHorizontalBox::Slot()
+					[
+						SNew(STextBlock).Text(this, &FPrefabActorCustomization::GetSelectedPrefabName)
+					]
+				];
+			CollectionComboBox = ComboBox;
+			if (!CurrentPrefabThumbnail.IsValid())
+			{
+				CurrentPrefabThumbnail = MakeShareable(new FAssetThumbnail(SelectedAssetPrefab, 64, 64, AssetThumbnailPool));
+			}
+			Category.AddCustomRow(LOCTEXT("PrefabCollectionCommand_Select", "PrefabCollectionCommand_Select"))
+				.NameContent()
+				[
+					SNew(STextBlock).Text(LOCTEXT("PrefabCollecion_Selected", "Selected Item"))
+				]
+				.ValueContent()
+				[
+					SNew(SHorizontalBox)
+					+ SHorizontalBox::Slot()
+					.Padding(5.0f, 5.0f, 5.0f, 5.0f)
+					.AutoWidth()
+					[
+						SNew(SBox)
+						.WidthOverride(64)
+						.HeightOverride(64)
+						[
+							CurrentPrefabThumbnail->MakeThumbnailWidget()
+						]
+					]
+					+ SHorizontalBox::Slot()
+					.Padding(0.0f, 0.0f, 5.0f, 0.0f)
+					.AutoWidth()
+					.VAlign(VAlign_Center)
+					[
+						ComboBox
+					]
+				];
+		}
+		// SBZ
+
 		Category.AddCustomRow(LOCTEXT("PrefabCollectionCommandRandomize_Filter", "randomize prefab collection asset"))
 		.WholeRowContent()
 		[
 			SNew(SButton)
 			.Text(LOCTEXT("PrefabCollectionCommand_RandomizeCollection", "Randomize"))
-			.OnClicked(FOnClicked::CreateStatic(&FPrefabActorCustomization::RandomizePrefabCollection, &DetailBuilder))
+			.OnClicked(this, &FPrefabActorCustomization::RandomizePrefabCollection, &DetailBuilder)	// SBZ stephane.maruejouls - PD3-480 - Collection dropdown
 		];
 
 		Category.AddCustomRow(LOCTEXT("PrefabCollectionCommand_Filter", "load prefab collection asset"))
@@ -272,6 +395,74 @@ void FPrefabActorCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 		];
 	}
 }
+
+// SBZ stephane.maruejouls - PD3-480 - Collection dropdown
+void FPrefabActorCustomization::UpdateSelectedAsset(TArray<APrefabActor*> PrefabActors)
+{
+	SelectedAssetPrefab = nullptr;
+	UPrefabricatorAssetInterface* CurrentAsset = nullptr;
+	bool bIsSameAsset = true;
+	for (APrefabActor* PrefabActor : PrefabActors)
+	{
+		if (PrefabActor->PrefabComponent)
+		{
+			UPrefabricatorAssetInterface* Asset = PrefabActor->PrefabComponent->PrefabAssetInterface.LoadSynchronous();
+			if (!CurrentAsset)
+			{
+				CurrentAsset = Asset;
+			}
+			else if (CurrentAsset != Asset)
+			{
+				bIsSameAsset = false;
+				break;
+			}
+		}
+	}
+	if (bIsSameAsset)
+	{
+		// same collection, now check if we have same selected prefab
+		CurrentAsset = nullptr;
+		for (APrefabActor* PrefabActor : PrefabActors)
+		{
+			if (PrefabActor->PrefabComponent)
+			{
+				UPrefabricatorAssetInterface* Asset = PrefabActor->GetPrefabAsset();
+				if (!CurrentAsset)
+				{
+					CurrentAsset = Asset;
+				}
+				else if (CurrentAsset != Asset)
+				{
+					bIsSameAsset = false;
+					break;
+				}
+			}
+		}
+	}
+	if (bIsSameAsset && PrefabActors.Num() > 0)
+	{
+		SelectedAssetPrefab = PrefabActors[0]->GetPrefabAsset();
+	}
+	if (CurrentPrefabThumbnail.IsValid())
+	{
+		CurrentPrefabThumbnail->SetAsset(SelectedAssetPrefab);
+		CurrentPrefabThumbnail->RefreshThumbnail();
+	}
+	if (CollectionComboBox.IsValid())
+	{
+		CollectionComboBox->SetSelectedItem(SelectedAssetPrefab);
+	}
+}
+
+FText FPrefabActorCustomization::GetSelectedPrefabName() const
+{	
+	if (!SelectedAssetPrefab)
+	{
+		return LOCTEXT("PrefabCustom_Multiple", "Multiple values");
+	}
+	return FText::FromString(SelectedAssetPrefab->GetPathName());
+}
+// SBZ
 
 TSharedRef<IDetailCustomization> FPrefabActorCustomization::MakeInstance()
 {
@@ -384,6 +575,7 @@ FReply FPrefabActorCustomization::RandomizePrefabCollection(IDetailLayoutBuilder
 			FPrefabTools::LoadStateFromPrefabAsset(PrefabActor, LoadSettings);
 		}
 	}
+	UpdateSelectedAsset(PrefabActors);	// SBZ stephane.maruejouls - PD3-480 - Collection dropdown
 	return FReply::Handled();
 }
 

@@ -4,6 +4,11 @@
 #include "CoreMinimal.h"
 #include "IDetailCustomization.h"
 #include "Input/Reply.h"
+#include "SharedPointer.h"			 // SBZ stephane.maruejouls - PD3-480 - Collection dropdown
+#include "Widgets/Input/SComboBox.h" // SBZ stephane.maruejouls - PD3-480 - Collection dropdown
+
+class UPrefabricatorAsset;			// SBZ stephane.maruejouls - PD3-480 - Collection dropdown
+class APrefabActor;					// SBZ stephane.maruejouls - PD3-480 - Collection dropdown
 
 class PREFABRICATOREDITOR_API FPrefabActorCustomization : public IDetailCustomization {
 public:
@@ -16,7 +21,7 @@ public:
 	static FReply HandleSaveToAsset(IDetailLayoutBuilder* DetailBuilder);
 	static FReply HandleSaveToNewAsset(IDetailLayoutBuilder* DetailBuilder);
 	static FReply HandleLoadFromAsset(IDetailLayoutBuilder* DetailBuilder);
-	static FReply RandomizePrefabCollection(IDetailLayoutBuilder* DetailBuilder);
+	FReply RandomizePrefabCollection(IDetailLayoutBuilder* DetailBuilder);					// SBZ stephane.maruejouls - PD3-480 - Collection dropdown
 	static FReply UnlinkPrefab(IDetailLayoutBuilder* DetailBuilder, bool bRecursive);
 	static FReply UpdateThumbFromViewport(IDetailLayoutBuilder* DetailBuilder);
 
@@ -32,6 +37,16 @@ public:
 	// SBZ stephane.maruejouls - Update merged from prefab
 	bool ContainsMerged(IDetailLayoutBuilder* DetailBuilder) const;
 	static FReply UpdateMergedPrefabs(IDetailLayoutBuilder* DetailBuilder);
+	// SBZ
+	
+	// SBZ stephane.maruejouls - PD3-480 - Collection dropdown
+private:
+	void UpdateSelectedAsset(TArray<APrefabActor*> PrefabActors);
+	UPrefabricatorAsset* GetSelectedAssetPrefab() const { return SelectedAssetPrefab; }
+	UPrefabricatorAsset* SelectedAssetPrefab = nullptr;
+	FText GetSelectedPrefabName() const;
+	TSharedPtr< FAssetThumbnail > CurrentPrefabThumbnail;
+	TSharedPtr<SComboBox<UObject*>> CollectionComboBox;
 	// SBZ
 };
 
