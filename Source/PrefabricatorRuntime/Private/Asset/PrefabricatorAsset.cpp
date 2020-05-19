@@ -44,9 +44,19 @@ FVector FPrefabricatorAssetUtils::FindPivot(const TArray<AActor*>& InActors)
 		case EPrefabricatorPivotPosition::Center:
 			Pivot = Bounds.GetCenter();
 			break;
+		// SBZ stephane.maruejouls - PD3-919 - pivot using selection
+		case EPrefabricatorPivotPosition::Selection: 
+			Pivot = InActors[InActors.Num() - 1]->GetActorLocation();
+			break;
+		// SBZ
 		default:;
 		}
-		Pivot.Z = Bounds.Min.Z;
+		// SBZ stephane.maruejouls - PD3-919 - pivot using selection
+		if (GetDefault< UPrefabricatorSettings>()->PivotPosition != EPrefabricatorPivotPosition::Selection)
+		{
+			Pivot.Z = Bounds.Min.Z;
+		}
+		// SBZ
 	}
 
 	TSharedPtr<IPrefabricatorService> Service = FPrefabricatorService::Get();

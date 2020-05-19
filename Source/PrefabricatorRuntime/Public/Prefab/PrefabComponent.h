@@ -21,7 +21,9 @@ public:
 #if WITH_EDITOR
 	virtual void PostEditChangeProperty(struct FPropertyChangedEvent& e) override;
 #endif // WITH_EDITOR
-	
+
+	virtual void Serialize(FArchive& Ar) override;
+
 private:
 #if WITH_EDITORONLY_DATA
 	UPROPERTY()

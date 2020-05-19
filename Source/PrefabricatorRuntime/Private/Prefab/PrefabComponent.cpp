@@ -80,4 +80,8 @@ void UPrefabComponent::PostEditChangeProperty(struct FPropertyChangedEvent& e)
 
 }
 #endif // WITH_EDITOR
+void UPrefabComponent::Serialize(FArchive& Ar)
+{
+	Super::Serialize(Ar);
+}
 

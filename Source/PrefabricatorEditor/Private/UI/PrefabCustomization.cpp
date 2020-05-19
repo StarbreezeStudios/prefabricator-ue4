@@ -285,6 +285,7 @@ void FPrefabActorCustomization::CustomizeDetails(IDetailLayoutBuilder& DetailBui
 							}
 						}
 					}
+					GEditor->RedrawLevelEditingViewports(); // SBZ stephane.maruejouls - refresh when on 'non realtime' mode in editor
 				})
 				.OnGenerateWidget_Lambda([AssetThumbnailPool](UObject* Object)
 				{
@@ -556,6 +557,7 @@ FReply FPrefabActorCustomization::HandleLoadFromAsset(IDetailLayoutBuilder* Deta
 			PrefabActor->LoadPrefab();
 		}
 	}
+	GEditor->RedrawLevelEditingViewports(); // SBZ stephane.maruejouls - refresh when on 'non realtime' mode in editor
 	return FReply::Handled();
 }
 
@@ -576,6 +578,7 @@ FReply FPrefabActorCustomization::RandomizePrefabCollection(IDetailLayoutBuilder
 		}
 	}
 	UpdateSelectedAsset(PrefabActors);	// SBZ stephane.maruejouls - PD3-480 - Collection dropdown
+	GEditor->RedrawLevelEditingViewports(); // SBZ stephane.maruejouls - refresh when on 'non realtime' mode in editor
 	return FReply::Handled();
 }
 
@@ -713,6 +716,7 @@ FReply FPrefabActorCustomization::MakeInstances(IDetailLayoutBuilder* DetailBuil
 			ConvertToInstances(PrefabActor, bHierarchical);
 		}
 	}
+	GEditor->RedrawLevelEditingViewports(); // SBZ stephane.maruejouls - refresh when on 'non realtime' mode in editor
 	return FReply::Handled();
 }
 
@@ -770,7 +774,7 @@ FReply FPrefabActorCustomization::MakeStaticMeshes(IDetailLayoutBuilder* DetailB
 			ConvertToStaticMeshes(PrefabActor);
 		}
 	}
-
+	GEditor->RedrawLevelEditingViewports(); // SBZ stephane.maruejouls - refresh when on 'non realtime' mode in editor
 	return FReply::Handled();
 }
 // SBZ
@@ -897,6 +901,7 @@ static void GetAttachedActorsRecursive(AActor* Actor, TArray<AActor*>& OutActors
 
 static void MergePrefab( APrefabActor* PrefabActor, FString SaveObjectPath, bool bUpdate)
 {
+	const FTransform PrefabTransform = PrefabActor->GetActorTransform();
 	const IMeshMergeUtilities& MeshUtilities = FModuleManager::Get().LoadModuleChecked<IMeshMergeModule>("MeshMergeUtilities").GetUtilities();
 	IAssetTools& AssetTools = FModuleManager::Get().LoadModuleChecked<FAssetToolsModule>("AssetTools").Get();
 	FContentBrowserModule& ContentBrowserModule = FModuleManager::LoadModuleChecked<FContentBrowserModule>("ContentBrowser");
@@ -933,6 +938,8 @@ static void MergePrefab( APrefabActor* PrefabActor, FString SaveObjectPath, bool
 		{
 			bReuse = OpenMsgDlgInt(EAppMsgType::YesNo, EAppReturnType::No, LOCTEXT("Prefab_CreateMergedActor_Replace", "Reuse the existing asset (Yes)\nor\nOverwrite the existing asset (No)"), LOCTEXT("Prefab_Existing", "Existing asset")) == EAppReturnType::Yes;
 		}
+
+		PrefabActor->SetActorTransform(FTransform::Identity);
 		PackageName = FPackageName::ObjectPathToPackageName(SaveObjectPath);
 
 		TArray<UPrimitiveComponent*> SelectedComponents;
@@ -946,8 +953,9 @@ static void MergePrefab( APrefabActor* PrefabActor, FString SaveObjectPath, bool
 				MergedActors.Add(Actor);
 			}
 		}
-
-		FVector MergedActorLocation;
+		const UPrefabricatorSettings* PS = GetDefault<UPrefabricatorSettings>();
+		const bool bPivotCentered = PS->bCenteredPivotOnMerge;
+		FVector MergedActorLocation = FVector::ZeroVector;
 		TArray<UObject*> AssetsToSync;
 		if (!bReuse)
 		{
@@ -964,6 +972,7 @@ static void MergePrefab( APrefabActor* PrefabActor, FString SaveObjectPath, bool
 					FMeshMergingSettings Settings;
 					Settings.bMergePhysicsData = true;
 					Settings.LODSelectionType = EMeshLODSelectionType::AllLODs;
+					Settings.bPivotPointAtZero = bPivotCentered;
 					MeshUtilities.MergeComponentsToStaticMesh(SelectedComponents, World, Settings, nullptr, nullptr, PackageName, AssetsToSync, MergedActorLocation, ScreenAreaSize, true);
 				}
 			}
@@ -972,7 +981,10 @@ static void MergePrefab( APrefabActor* PrefabActor, FString SaveObjectPath, bool
 		{
 			if (SelectedComponents.Num())
 			{
-				MergedActorLocation = SelectedComponents[0]->GetComponentLocation();
+				if (!bPivotCentered)
+				{
+					MergedActorLocation = SelectedComponents[0]->GetComponentLocation();
+				}
 				AssetsToSync.Add(AssetData.GetAsset());
 			}
 		}
@@ -1031,6 +1043,7 @@ static void MergePrefab( APrefabActor* PrefabActor, FString SaveObjectPath, bool
 				}
 			}
 		}
+		PrefabActor->SetActorTransform(PrefabTransform);
 	}
 }
 
@@ -1046,6 +1059,7 @@ FReply FPrefabActorCustomization::MergeMeshes(IDetailLayoutBuilder* DetailBuilde
 			MergePrefab(PrefabActor, TEXT(""), false );
 		}
 	}
+	GEditor->RedrawLevelEditingViewports(); // SBZ stephane.maruejouls - refresh when on 'non realtime' mode in editor
 	return FReply::Handled();
 }
 // SBZ
@@ -1146,6 +1160,7 @@ FReply FPrefabActorCustomization::UpdateMergedPrefabs(IDetailLayoutBuilder* Deta
 			}
 		}
 	}
+	GEditor->RedrawLevelEditingViewports(); // SBZ stephane.maruejouls - refresh when on 'non realtime' mode in editor
 	return FReply::Handled();
 }
 // SBZ
@@ -1182,7 +1197,7 @@ FReply FPrefabRandomizerCustomization::HandleRandomize(IDetailLayoutBuilder* Det
 			PrefabRandomizer->Randomize(FMath::Rand());
 		}
 	}
-
+	GEditor->RedrawLevelEditingViewports(); // SBZ stephane.maruejouls - refresh when on 'non realtime' mode in editor
 	return FReply::Handled();
 }
 

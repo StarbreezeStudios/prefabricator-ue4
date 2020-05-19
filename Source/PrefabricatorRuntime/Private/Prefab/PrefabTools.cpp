@@ -109,7 +109,6 @@ bool FPrefabTools::CanCreatePrefab()
 
 void FPrefabTools::CreatePrefab()
 {
-	FPrefabricatorScopedTransaction UndoTransaction(LOCTEXT("TransLabel_MakeStatic", "Create Prefab"));	// SBZ stephane.maruejouls - undo revamp
 	TArray<AActor*> SelectedActors;
 	GetSelectedActors(SelectedActors);
 

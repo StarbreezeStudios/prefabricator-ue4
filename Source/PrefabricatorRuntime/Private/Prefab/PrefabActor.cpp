@@ -72,6 +72,11 @@ void APrefabActor::PostActorCreated()
 	LoadPrefab();
 }
 
+void APrefabActor::Serialize(FArchive& Ar)
+{
+	Super::Serialize(Ar);
+}
+
 #if WITH_EDITOR
 // SBZ stephane.maruejouls - remove PrefabActor
 void APrefabActor::BeginPlay()

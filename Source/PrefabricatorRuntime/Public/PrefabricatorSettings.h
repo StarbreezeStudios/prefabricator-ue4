@@ -11,7 +11,8 @@ enum class EPrefabricatorPivotPosition : uint8
 {
 	ExtremeLeft,
 	ExtremeRight,
-	Center
+	Center,		// SBZ stephane.maruejouls - PD3-919 - pivot using selection
+	Selection	// SBZ stephane.maruejouls - PD3-919 - pivot using selection
 };
 
 /**
@@ -29,6 +30,11 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, config, Category = "Settings")
 	bool bAllowDynamicUpdate = true;
+
+	// SBZ stephane.maruejouls - PD3-827 - Pivot Merge
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, config, Category = "Settings")
+	bool bCenteredPivotOnMerge = true;
+	// SBZ
 
 public:
 	UPrefabricatorSettings();
